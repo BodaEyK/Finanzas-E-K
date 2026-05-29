@@ -767,4 +767,145 @@ tbody td {
 
   .toast-container { bottom: 12px; right: 12px; left: 12px; }
   .toast { min-width: unset; max-width: 100%; }
+
+  /* Tabla → tarjetas en móvil */
+  .tx-table-desktop { display: none !important; }
+  .tx-cards-mobile  { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+}
+
+/* ============================================================
+   TX CARDS — TOGGLE DESKTOP/MOBILE
+   ============================================================ */
+.tx-table-desktop { display: block; }
+.tx-cards-mobile  { display: none; }
+
+/* ============================================================
+   TX CARDS — ESTILOS
+   ============================================================ */
+.tx-card {
+  background: var(--color-surface2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: background var(--transition);
+}
+.tx-card:active { background: var(--color-border); }
+
+.tx-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+.tx-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.tx-card-desc {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tx-card-date {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.tx-card-amount {
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tx-card-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tx-card-cat {
+  font-size: 11px;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+.tx-card-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.tx-card-notes {
+  font-size: 11px;
+  color: var(--color-muted2);
+  padding-top: 6px;
+  border-top: 1px solid var(--color-border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================
+   LOGIN SCREEN
+   ============================================================ */
+.app-layout.hidden { display: none; }
+
+.login-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+.login-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: slideUp .3s ease;
+}
+.login-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.login-title {
+  font-size: 22px;
+  color: var(--color-muted);
+  font-weight: 400;
+}
+.login-title strong { color: var(--color-text); font-weight: 800; }
+.login-error {
+  color: var(--color-red);
+  font-size: 12px;
+  text-align: center;
+  padding: 6px 0 2px;
+}
+.login-error.hidden { display: none; }
+
+.logout-btn {
+  width: 100%;
+  margin-top: 10px;
+  font-size: 12px;
+  justify-content: center;
 }

@@ -124,8 +124,30 @@ function buildTransaccionesTable(txMesAll) {
       </td>
     </tr>`).join('');
 
+  const cards = sorted.map(t => `
+    <div class="tx-card" data-id="${t.id}">
+      <div class="tx-card-top">
+        <div class="tx-card-main">
+          <span class="tx-card-desc">${escapeHtml(t.descripcion)}</span>
+          <span class="tx-card-date">${formatDate(t.fecha)}</span>
+        </div>
+        <span class="tx-card-amount ${t.tipo === 'Ingreso' ? 'amount-income' : 'amount-expense'}">
+          ${formatMoney(t.monto)}
+        </span>
+      </div>
+      <div class="tx-card-bottom">
+        <span class="tx-card-cat">${escapeHtml(t.categoria)}</span>
+        <span class="badge ${t.tipo === 'Ingreso' ? 'badge-ingreso' : 'badge-gasto'}">${t.tipo}</span>
+        <div class="tx-card-actions">
+          <button class="btn-icon edit-btn" title="Editar" data-id="${t.id}">✏️</button>
+          <button class="btn-icon delete btn-delete" title="Eliminar" data-id="${t.id}">🗑️</button>
+        </div>
+      </div>
+      ${t.notas ? `<div class="tx-card-notes">📝 ${escapeHtml(t.notas)}</div>` : ''}
+    </div>`).join('');
+
   return `
-    <div class="table-wrap">
+    <div class="table-wrap tx-table-desktop">
       <table>
         <thead>
           <tr>
@@ -140,7 +162,8 @@ function buildTransaccionesTable(txMesAll) {
         </thead>
         <tbody>${rows}</tbody>
       </table>
-    </div>`;
+    </div>
+    <div class="tx-cards-mobile">${cards}</div>`;
 }
 
 /* ---- Agregar transacción ---- */

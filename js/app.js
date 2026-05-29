@@ -25,6 +25,7 @@ const AppState = {
   transacciones: [],
   presupuesto: [],
   loading: false,
+  currentUser: null,
 };
 
 /* ============================================================
@@ -194,6 +195,18 @@ async function checkBackendStatus() {
 }
 
 /* ============================================================
+   USER UI
+   ============================================================ */
+function updateUserUI(user) {
+  if (!user) return;
+  const avatarEl = document.getElementById('userAvatar');
+  const nameEl   = document.getElementById('userName');
+  const initials = user.displayName.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  if (avatarEl) avatarEl.textContent = initials;
+  if (nameEl)   nameEl.textContent   = user.displayName;
+}
+
+/* ============================================================
    EVENT LISTENERS
    ============================================================ */
 function initEvents() {
@@ -225,16 +238,18 @@ function initEvents() {
   document.getElementById('modalOverlay').addEventListener('click', e => {
     if (e.target === document.getElementById('modalOverlay')) closeModal();
   });
+
+  // Logout
+  document.getElementById('logoutBtn')?.addEventListener('click', () => Auth.logout());
 }
 
 /* ============================================================
-   INIT
+   INIT — llamado por auth.js tras verificar sesión
    ============================================================ */
 async function init() {
+  updateUserUI(AppState.currentUser);
   initEvents();
   await loadData();
   checkBackendStatus();
   renderDashboard();
 }
-
-document.addEventListener('DOMContentLoaded', init);

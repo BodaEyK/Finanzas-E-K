@@ -14,7 +14,7 @@
   <!-- Overlay para móvil -->
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-  <div class="app-layout">
+  <div class="app-layout hidden" id="appLayout">
     <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
@@ -55,12 +55,13 @@
 
       <div class="sidebar-footer">
         <div class="user-info">
-          <div class="user-avatar">EK</div>
+          <div class="user-avatar" id="userAvatar">EK</div>
           <div class="user-details">
-            <span class="user-name">Edgardo &amp; Kiara</span>
+            <span class="user-name" id="userName">Edgardo &amp; Kiara</span>
             <span class="user-location">Sullana, Perú</span>
           </div>
         </div>
+        <button class="btn btn-ghost logout-btn" id="logoutBtn">↪ Cerrar sesión</button>
       </div>
     </aside>
 
@@ -138,6 +139,7 @@
     </div>
   </div>
 
+  <script src="js/auth.js"></script>
   <script src="js/api.js"></script>
   <script src="js/dashboard.js"></script>
   <script src="js/registro.js"></script>
