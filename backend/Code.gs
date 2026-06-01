@@ -71,6 +71,19 @@ function generateId() {
 /* ============================================================
    TRANSACCIONES
    ============================================================ */
+/* Convierte una celda de fecha (Date o string) a 'yyyy-MM-dd' en zona Lima */
+function _parseSheetDate(cell) {
+  if (!cell) return '';
+  // Si ya es un string con formato yyyy-MM-dd, devolverlo directo
+  if (typeof cell === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(cell)) return cell;
+  // Si es un objeto Date (como Sheets lo almacena cuando detecta fecha)
+  try {
+    return Utilities.formatDate(new Date(cell), 'America/Lima', 'yyyy-MM-dd');
+  } catch (e) {
+    return String(cell).substring(0, 10);
+  }
+}
+
 function getTransacciones() {
   const sheet  = getSheet(SHEET_TX);
   const data   = sheet.getDataRange().getValues();
@@ -78,7 +91,7 @@ function getTransacciones() {
 
   const transacciones = data.slice(1).map(row => ({
     id:          String(row[0]),
-    fecha:       Utilities.formatDate(new Date(row[1]), Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+    fecha:       _parseSheetDate(row[1]),
     descripcion: String(row[2]),
     categoria:   String(row[3]),
     tipo:        String(row[4]),

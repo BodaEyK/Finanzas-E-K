@@ -467,6 +467,25 @@ tbody td {
   margin-bottom: 16px;
   color: var(--color-text);
 }
+
+/* Toggle formulario */
+.form-toggle-btn {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+.form-toggle-icon {
+  font-size: 16px;
+  color: var(--color-muted);
+  transition: transform .22s ease;
+  line-height: 1;
+}
+.form-toggle-icon.collapsed { transform: rotate(-90deg); }
+.form-body { padding-top: 16px; }
+.form-body.collapsed { display: none; }
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

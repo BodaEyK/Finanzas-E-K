@@ -3,6 +3,15 @@
    ============================================================ */
 
 let _filtroTipo = 'Todos';
+let _formCollapsed = window.innerWidth < 640;
+
+function localDateString() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 function renderRegistro() {
   const container = document.getElementById('registro-content');
@@ -14,13 +23,17 @@ function renderRegistro() {
   container.innerHTML = `
     <!-- Formulario nueva transacción -->
     <div class="form-card">
-      <div class="form-title">➕ Nueva Transacción</div>
+      <div class="form-title form-toggle-btn" id="formToggleBtn">
+        <span>➕ Nueva Transacción</span>
+        <span class="form-toggle-icon ${_formCollapsed ? 'collapsed' : ''}">▾</span>
+      </div>
+      <div class="form-body ${_formCollapsed ? 'collapsed' : ''}" id="formBody">
       <form id="formNuevaTx" autocomplete="off">
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label" for="txFecha">Fecha</label>
             <input type="date" id="txFecha" class="form-control" required
-              value="${new Date().toISOString().split('T')[0]}" />
+              value="${localDateString()}" />
           </div>
           <div class="form-group" style="flex:2;min-width:200px">
             <label class="form-label" for="txDescripcion">Descripción</label>
@@ -56,6 +69,7 @@ function renderRegistro() {
           </div>
         </div>
       </form>
+      </div>
     </div>
 
     <!-- Filtros -->
@@ -74,6 +88,13 @@ function renderRegistro() {
       ${buildTransaccionesTable(txMes)}
     </div>
   `;
+
+  // Toggle formulario (móvil)
+  document.getElementById('formToggleBtn').addEventListener('click', () => {
+    _formCollapsed = !_formCollapsed;
+    document.getElementById('formBody').classList.toggle('collapsed', _formCollapsed);
+    document.querySelector('.form-toggle-icon').classList.toggle('collapsed', _formCollapsed);
+  });
 
   // Sincronizar categorías al cambiar tipo
   document.getElementById('txTipo').addEventListener('change', e => {
@@ -187,7 +208,7 @@ async function handleAddTx(e) {
     await loadData();
     showToast('Transacción guardada correctamente', 'success');
     document.getElementById('formNuevaTx').reset();
-    document.getElementById('txFecha').value = new Date().toISOString().split('T')[0];
+    document.getElementById('txFecha').value = localDateString();
     renderRegistro();
   } catch (err) {
     showToast('Error al guardar: ' + err.message, 'error');
