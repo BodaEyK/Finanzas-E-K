@@ -745,6 +745,12 @@ tbody td {
 }
 
 /* ============================================================
+   TX CARDS — BASE (debe ir antes de los breakpoints)
+   ============================================================ */
+.tx-table-desktop { display: block; }
+.tx-cards-mobile  { display: none; }
+
+/* ============================================================
    RESPONSIVE — TABLET
    ============================================================ */
 @media (max-width: 1100px) {
@@ -789,14 +795,8 @@ tbody td {
 
   /* Tabla → tarjetas en móvil */
   .tx-table-desktop { display: none !important; }
-  .tx-cards-mobile  { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+  .tx-cards-mobile  { display: flex !important; flex-direction: column; gap: 8px; padding: 12px; }
 }
-
-/* ============================================================
-   TX CARDS — TOGGLE DESKTOP/MOBILE
-   ============================================================ */
-.tx-table-desktop { display: block; }
-.tx-cards-mobile  { display: none; }
 
 /* ============================================================
    TX CARDS — ESTILOS
