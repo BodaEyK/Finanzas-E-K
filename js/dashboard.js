@@ -108,7 +108,7 @@ function buildBudgetTable(txMes, presupuesto) {
 
     return `
       <tr>
-        <td><strong>${p.categoria}</strong></td>
+        <td><strong>${escapeHtml(p.categoria)}</strong></td>
         <td class="amount-neutral">${formatMoney(p.presupuesto)}</td>
         <td class="amount-expense">${formatMoney(gastado)}</td>
         <td class="${disponible < 0 ? 'amount-expense' : 'amount-income'}">${formatMoney(disponible)}</td>

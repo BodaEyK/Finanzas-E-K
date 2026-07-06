@@ -69,15 +69,15 @@ function buildPresupuestoRows(presupuesto, gastosPorCat) {
     const barWidth = Math.min(pct, 100).toFixed(1);
 
     return `
-      <tr data-cat="${p.categoria}">
-        <td><strong>${p.categoria}</strong></td>
+      <tr data-cat="${escapeHtml(p.categoria)}">
+        <td><strong>${escapeHtml(p.categoria)}</strong></td>
         <td>
           <div style="display:flex;align-items:center;gap:4px">
             <span style="color:var(--color-muted);font-size:12px">S/</span>
             <input
               type="number"
               class="budget-input"
-              data-cat="${p.categoria}"
+              data-cat="${escapeHtml(p.categoria)}"
               value="${pres}"
               min="0"
               step="10"

@@ -10,6 +10,32 @@ const SPREADSHEET_ID = '1fjalFTPBcp5-z8tmrYhdbJwPRmB-k3UZjk6dYLzBtfU'; // <-- Pe
 const SHEET_TX       = 'Transacciones';
 const SHEET_BUDGET   = 'Presupuesto';
 
+/* Clave de acceso: NO se guarda en este código (el repo es público).
+   Vive en las Propiedades del Script (privadas del dueño) + en la cabeza del usuario.
+   Para fijarla o cambiarla:
+     1. Reemplaza PON_TU_CLAVE_AQUI por tu clave secreta.
+     2. En el editor, selecciona la función setToken y pulsa Ejecutar (una sola vez).
+     3. Vuelve a dejar el placeholder PON_TU_CLAVE_AQUI (para no subir la clave al repo). */
+function setToken() {
+  PropertiesService.getScriptProperties().setProperty('API_TOKEN', 'PON_TU_CLAVE_AQUI');
+}
+
+function _checkToken(token) {
+  const real = PropertiesService.getScriptProperties().getProperty('API_TOKEN');
+  return !!real && token === real;
+}
+
+/* Serializa las escrituras para evitar corrupción por accesos simultáneos */
+function _withLock(fn) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000); // espera hasta 10 s por el turno
+  try {
+    return fn();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 /* ============================================================
    CORS HELPERS
    ============================================================ */
@@ -27,9 +53,18 @@ function doGet(e) {
   try {
     const action = e.parameter.action;
 
+    // ping: solo prueba de conectividad, no expone datos → sin token
+    if (action === 'ping') return corsResponse({ ok: true });
+
+    // auth: valida la clave de acceso y responde true/false (para la pantalla de login)
+    if (action === 'auth') return corsResponse({ ok: _checkToken(e.parameter.token) });
+
+    // El resto de lecturas requieren token
+    if (!_checkToken(e.parameter.token))
+      return corsResponse({ error: 'No autorizado' });
+
     if (action === 'getTransacciones') return corsResponse(getTransacciones());
     if (action === 'getPresupuesto')   return corsResponse(getPresupuesto());
-    if (action === 'ping')             return corsResponse({ ok: true });
 
     return corsResponse({ error: 'Acción desconocida: ' + action });
   } catch (err) {
@@ -43,12 +78,17 @@ function doGet(e) {
 function doPost(e) {
   try {
     const body   = JSON.parse(e.postData.contents);
+
+    if (!_checkToken(body.token))
+      return corsResponse({ error: 'No autorizado' });
+
     const action = body.action;
 
-    if (action === 'addTransaccion')    return corsResponse(addTransaccion(body));
-    if (action === 'updateTransaccion') return corsResponse(updateTransaccion(body));
-    if (action === 'deleteTransaccion') return corsResponse(deleteTransaccion(body.id));
-    if (action === 'updatePresupuesto') return corsResponse(updatePresupuesto(body.presupuesto));
+    // Escrituras serializadas con LockService para evitar corrupción concurrente
+    if (action === 'addTransaccion')    return corsResponse(_withLock(() => addTransaccion(body)));
+    if (action === 'updateTransaccion') return corsResponse(_withLock(() => updateTransaccion(body)));
+    if (action === 'deleteTransaccion') return corsResponse(_withLock(() => deleteTransaccion(body.id)));
+    if (action === 'updatePresupuesto') return corsResponse(_withLock(() => updatePresupuesto(body.presupuesto)));
 
     return corsResponse({ error: 'Acción desconocida: ' + action });
   } catch (err) {

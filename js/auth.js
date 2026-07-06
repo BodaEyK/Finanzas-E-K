@@ -1,29 +1,21 @@
 /* ============================================================
    FINANZAS E&K — AUTH.JS
-   Autenticación simple con SHA-256 + sesión en localStorage
-   Para cambiar contraseña: ejecutar en consola del navegador:
-     crypto.subtle.digest('SHA-256', new TextEncoder().encode('nueva-clave'))
-       .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
-   y reemplazar passwordHash a continuación.
+   Autenticación por CLAVE ÚNICA validada contra el backend.
+
+   El secreto NO vive en este código (el repo es público): lo escribe el
+   usuario al entrar y se compara contra la propiedad privada API_TOKEN del
+   Apps Script. Tras validar, la clave se guarda en localStorage (fek_token)
+   para enviarla en cada llamada a la API.
+
+   Para cambiar la clave: ejecutar setToken() en el editor de Apps Script.
    ============================================================ */
 
 const AUTH_CONFIG = {
   sessionKey: 'fek_session',
-  users: [
-    {
-      username:     'ek',
-      displayName:  'Edgardo & Kiara',
-      passwordHash: '63cd71184761fd21628f41941ca6a5f8b7f4af563bd4921e7aa315f5d265ff89' // EyK2026
-    }
-  ]
+  tokenKey:   'fek_token',
 };
 
 const Auth = {
-
-  async hashPassword(str) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-    return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join('');
-  },
 
   checkSession() {
     try {
@@ -35,19 +27,25 @@ const Auth = {
     }
   },
 
-  async login(username, password) {
-    const hash = await Auth.hashPassword(password);
-    const user = AUTH_CONFIG.users.find(
-      u => u.username === username.toLowerCase().trim() && u.passwordHash === hash
-    );
-    if (!user) return null;
-    const session = { username: user.username, displayName: user.displayName, loginAt: Date.now() };
+  /** Valida la clave contra el backend. Devuelve la sesión o null.
+   *  Propaga el error si el backend no responde (para distinguir "clave mala"
+   *  de "sin conexión"). */
+  async login(password) {
+    const token = (password || '').trim();
+    if (!token) return null;
+
+    const ok = await API.verifyToken(token);
+    if (!ok) return null;
+
+    localStorage.setItem(AUTH_CONFIG.tokenKey, token);
+    const session = { displayName: 'Edgardo & Kiara', loginAt: Date.now() };
     localStorage.setItem(AUTH_CONFIG.sessionKey, JSON.stringify(session));
     return session;
   },
 
   logout() {
     localStorage.removeItem(AUTH_CONFIG.sessionKey);
+    localStorage.removeItem(AUTH_CONFIG.tokenKey);
     location.reload();
   },
 
@@ -64,16 +62,11 @@ const Auth = {
         <p style="text-align:center;font-size:12px;color:var(--color-muted2);margin-top:-8px">Sullana, Perú</p>
         <form id="loginForm" autocomplete="off">
           <div class="form-group">
-            <label class="form-label" for="loginUser">Usuario</label>
-            <input type="text" id="loginUser" class="form-control"
-              placeholder="ek" required autocomplete="username" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="loginPass">Contraseña</label>
+            <label class="form-label" for="loginPass">Clave de acceso</label>
             <input type="password" id="loginPass" class="form-control"
               placeholder="••••••••" required autocomplete="current-password" />
           </div>
-          <p id="loginError" class="login-error hidden">Usuario o contraseña incorrectos</p>
+          <p id="loginError" class="login-error hidden">Clave incorrecta</p>
           <button type="submit" class="btn btn-primary" id="loginBtn"
             style="width:100%;margin-top:8px">Entrar</button>
         </form>
@@ -83,22 +76,27 @@ const Auth = {
 
     document.getElementById('loginForm').addEventListener('submit', async e => {
       e.preventDefault();
-      const btn = document.getElementById('loginBtn');
+      const btn   = document.getElementById('loginBtn');
+      const errEl = document.getElementById('loginError');
       btn.disabled    = true;
       btn.textContent = '⏳ Verificando…';
-      document.getElementById('loginError').classList.add('hidden');
+      errEl.classList.add('hidden');
 
-      const user = await Auth.login(
-        document.getElementById('loginUser').value,
-        document.getElementById('loginPass').value
-      );
+      let user = null;
+      let errMsg = 'Clave incorrecta';
+      try {
+        user = await Auth.login(document.getElementById('loginPass').value);
+      } catch (err) {
+        errMsg = 'No se pudo verificar. Revisa tu conexión.';
+      }
 
       if (user) {
         AppState.currentUser = user;
         Auth.hideLoginScreen();
         init();
       } else {
-        document.getElementById('loginError').classList.remove('hidden');
+        errEl.textContent = errMsg;
+        errEl.classList.remove('hidden');
         document.getElementById('loginPass').value = '';
         btn.disabled    = false;
         btn.textContent = 'Entrar';
@@ -115,7 +113,10 @@ const Auth = {
 
   initLogin() {
     const session = Auth.checkSession();
-    if (session) {
+    const token   = localStorage.getItem(AUTH_CONFIG.tokenKey);
+    // Necesitamos AMBOS: sin token no se puede hablar con el backend.
+    // (Cubre sesiones viejas del login anterior, que no guardaban token.)
+    if (session && token) {
       AppState.currentUser = session;
       Auth.hideLoginScreen();
       init();

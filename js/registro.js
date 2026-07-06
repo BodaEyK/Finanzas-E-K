@@ -133,7 +133,7 @@ function buildTransaccionesTable(txMesAll) {
     <tr data-id="${t.id}">
       <td>${formatDate(t.fecha)}</td>
       <td>${escapeHtml(t.descripcion)}</td>
-      <td><span style="font-size:12px;color:var(--color-muted)">${t.categoria}</span></td>
+      <td><span style="font-size:12px;color:var(--color-muted)">${escapeHtml(t.categoria)}</span></td>
       <td><span class="badge ${t.tipo === 'Ingreso' ? 'badge-ingreso' : 'badge-gasto'}">${t.tipo}</span></td>
       <td class="${t.tipo === 'Ingreso' ? 'amount-income' : 'amount-expense'}">${formatMoney(t.monto)}</td>
       <td style="font-size:12px;color:var(--color-muted2);max-width:140px;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.notas || '')}</td>
