@@ -179,6 +179,53 @@ async function refreshAndRender() {
 }
 
 /* ============================================================
+   PERÍODO POR DEFECTO
+   Mes en curso; si no tiene transacciones, el último mes con movimientos.
+   ============================================================ */
+function pickDefaultPeriod(transacciones) {
+  const now     = new Date();
+  const curMes  = now.getMonth() + 1;
+  const curAnio = now.getFullYear();
+
+  const hayEnActual = transacciones.some(t => {
+    const [y, m] = t.fecha.split('-').map(Number);
+    return m === curMes && y === curAnio;
+  });
+
+  // Mes actual si tiene datos, o si de plano no hay ninguna transacción
+  if (hayEnActual || transacciones.length === 0) {
+    return { mes: curMes, anio: curAnio };
+  }
+
+  // Si no, el mes de la transacción más reciente
+  const masReciente = transacciones.reduce((max, t) => (t.fecha > max ? t.fecha : max), transacciones[0].fecha);
+  const [y, m] = masReciente.split('-').map(Number);
+  return { mes: m, anio: y };
+}
+
+function _ensureYearOption(selAnio, anio) {
+  const existe = [...selAnio.options].some(o => o.value === String(anio));
+  if (!existe) {
+    const opt = document.createElement('option');
+    opt.value = String(anio);
+    opt.textContent = String(anio);
+    selAnio.appendChild(opt);
+  }
+}
+
+function applyDefaultPeriod() {
+  const { mes, anio } = pickDefaultPeriod(AppState.transacciones);
+  AppState.mes  = mes;
+  AppState.anio = anio;
+
+  const selMes  = document.getElementById('selectMes');
+  const selAnio = document.getElementById('selectAnio');
+  _ensureYearOption(selAnio, anio); // por si el año no está entre las opciones
+  selMes.value  = String(mes);
+  selAnio.value = String(anio);
+}
+
+/* ============================================================
    BACKEND STATUS
    ============================================================ */
 async function checkBackendStatus() {
@@ -250,6 +297,7 @@ async function init() {
   updateUserUI(AppState.currentUser);
   initEvents();
   await loadData();
+  applyDefaultPeriod();   // fija el mes en curso (o el último con transacciones)
   checkBackendStatus();
   renderDashboard();
 }
