@@ -743,6 +743,17 @@ tbody td {
   font-size: 16px;
   font-weight: 700;
 }
+.pres-hint {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-amber);
+  background: rgba(217,119,6,.14);
+  border-radius: 12px;
+  padding: 2px 10px;
+  vertical-align: middle;
+}
 
 /* ============================================================
    TX CARDS — BASE (debe ir antes de los breakpoints)

@@ -9,8 +9,9 @@ function renderDashboard() {
   const container = document.getElementById('dashboard-content');
   if (!container) return;
 
-  const { mes, anio, transacciones, presupuesto } = AppState;
+  const { mes, anio, transacciones } = AppState;
   const txMes = transaccionesDelMes(transacciones, mes, anio);
+  const presupuesto = presupuestoDelPeriodo(mes, anio);
 
   const totalIngresos = txMes
     .filter(t => t.tipo === 'Ingreso')

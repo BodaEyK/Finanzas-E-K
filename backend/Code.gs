@@ -88,7 +88,7 @@ function doPost(e) {
     if (action === 'addTransaccion')    return corsResponse(_withLock(() => addTransaccion(body)));
     if (action === 'updateTransaccion') return corsResponse(_withLock(() => updateTransaccion(body)));
     if (action === 'deleteTransaccion') return corsResponse(_withLock(() => deleteTransaccion(body.id)));
-    if (action === 'updatePresupuesto') return corsResponse(_withLock(() => updatePresupuesto(body.presupuesto)));
+    if (action === 'updatePresupuesto') return corsResponse(_withLock(() => updatePresupuesto(body.mes, body.presupuesto)));
 
     return corsResponse({ error: 'Acción desconocida: ' + action });
   } catch (err) {
@@ -194,30 +194,43 @@ function deleteTransaccion(id) {
 /* ============================================================
    PRESUPUESTO
    ============================================================ */
+/* Devuelve TODAS las filas de presupuesto (de todos los meses).
+   El frontend elige el mes efectivo y hereda del anterior si hace falta.
+   Columnas: Mes(yyyy-MM) | Categoria | Presupuesto */
 function getPresupuesto() {
   const sheet = getSheet(SHEET_BUDGET);
   const data  = sheet.getDataRange().getValues();
 
   const presupuesto = data.slice(1).map(row => ({
-    categoria:   String(row[0]),
-    presupuesto: Number(row[1]),
+    mes:         String(row[0]),
+    categoria:   String(row[1]),
+    presupuesto: Number(row[2]),
   })).filter(p => p.categoria && p.categoria !== 'undefined');
 
   return { presupuesto };
 }
 
-function updatePresupuesto(presupuesto) {
+/* Guarda el presupuesto de UN mes: reemplaza solo las filas de ese mes,
+   conservando intactos los demás meses. */
+function updatePresupuesto(mes, presupuesto) {
   const sheet = getSheet(SHEET_BUDGET);
+  const data  = sheet.getDataRange().getValues();
 
-  // Limpiar y reescribir
+  // Filas de OTROS meses (se conservan)
+  const otros = data.slice(1)
+    .filter(row => row[1] && String(row[0]) !== String(mes))
+    .map(row => [row[0], row[1], row[2]]);
+
+  // Filas nuevas del mes recibido
+  const nuevas = presupuesto.map(p => [mes, p.categoria, p.presupuesto]);
+
+  // Reescribir todo el cuerpo
   const lastRow = sheet.getLastRow();
-  if (lastRow > 1) {
-    sheet.getRange(2, 1, lastRow - 1, 2).clearContent();
-  }
+  if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, 3).clearContent();
 
-  const rows = presupuesto.map(p => [p.categoria, p.presupuesto]);
-  if (rows.length > 0) {
-    sheet.getRange(2, 1, rows.length, 2).setValues(rows);
+  const cuerpo = otros.concat(nuevas);
+  if (cuerpo.length > 0) {
+    sheet.getRange(2, 1, cuerpo.length, 3).setValues(cuerpo);
   }
 
   return { success: true };
@@ -234,12 +247,13 @@ function setupSheets() {
   if (!sheetTx) sheetTx = ss.insertSheet(SHEET_TX);
   sheetTx.getRange(1, 1, 1, 7).setValues([['ID','Fecha','Descripcion','Categoria','Tipo','Monto','Notas']]);
 
-  // Hoja Presupuesto
+  // Hoja Presupuesto — ahora con columna Mes (yyyy-MM)
   let sheetBudget = ss.getSheetByName(SHEET_BUDGET);
   if (!sheetBudget) sheetBudget = ss.insertSheet(SHEET_BUDGET);
-  sheetBudget.getRange(1, 1, 1, 2).setValues([['Categoria','Presupuesto']]);
+  sheetBudget.getRange(1, 1, 1, 3).setValues([['Mes','Categoria','Presupuesto']]);
 
-  // Insertar categorías por defecto
+  // Insertar categorías por defecto para el mes en curso
+  const periodo = Utilities.formatDate(new Date(), 'America/Lima', 'yyyy-MM');
   const categorias = [
     ['Vivienda',700],['Alimentación',600],['Transporte',160],
     ['Salud',100],['Educación',80],['Servicios',100],['Comunicaciones',120],
@@ -247,7 +261,43 @@ function setupSheets() {
     ['Bebé/Familia',200],['Regalos/Ocasiones',50],['Ahorro/Inversión',400],
     ['Emergencias',100],['Otros Gastos',80]
   ];
-  sheetBudget.getRange(2, 1, categorias.length, 2).setValues(categorias);
+  const rows = categorias.map(c => [periodo, c[0], c[1]]);
+  sheetBudget.getRange(2, 1, rows.length, 3).setValues(rows);
 
   Logger.log('Hojas creadas correctamente.');
+}
+
+/* ============================================================
+   MIGRACIÓN — Ejecutar UNA vez para pasar el presupuesto viejo
+   (Categoria | Presupuesto) al nuevo formato (Mes | Categoria | Presupuesto).
+   Estampa tu presupuesto actual en el mes en curso; de ahí en adelante
+   cada mes hereda del anterior hasta que lo edites.
+   ============================================================ */
+function migratePresupuesto() {
+  const sheet  = getSheet(SHEET_BUDGET);
+  const data   = sheet.getDataRange().getValues();
+  const header = data[0] || [];
+
+  // Si ya está en formato nuevo (primera columna 'Mes'), no hacer nada
+  if (String(header[0]).toLowerCase() === 'mes') {
+    Logger.log('Ya migrado: la columna Mes ya existe.');
+    return;
+  }
+
+  // Leer formato viejo: Categoria | Presupuesto
+  const viejo = data.slice(1)
+    .filter(r => r[0])
+    .map(r => ({ categoria: String(r[0]), presupuesto: Number(r[1]) }));
+
+  const periodo = Utilities.formatDate(new Date(), 'America/Lima', 'yyyy-MM');
+
+  // Reescribir la hoja con la columna Mes
+  sheet.clear();
+  sheet.getRange(1, 1, 1, 3).setValues([['Mes','Categoria','Presupuesto']]);
+  if (viejo.length > 0) {
+    const rows = viejo.map(p => [periodo, p.categoria, p.presupuesto]);
+    sheet.getRange(2, 1, rows.length, 3).setValues(rows);
+  }
+
+  Logger.log('Migradas ' + viejo.length + ' categorías al mes ' + periodo);
 }

@@ -6,8 +6,17 @@ function renderPresupuesto() {
   const container = document.getElementById('presupuesto-content');
   if (!container) return;
 
-  const { mes, anio, transacciones, presupuesto } = AppState;
+  const { mes, anio, transacciones } = AppState;
   const txMes = transaccionesDelMes(transacciones, mes, anio);
+  const presupuesto = presupuestoDelPeriodo(mes, anio);
+
+  // ¿Este mes ya tiene presupuesto propio, o se está heredando de otro mes?
+  const periodo      = periodoStr(mes, anio);
+  const tienePropio  = (AppState.presupuesto || []).some(p => p.mes === periodo);
+  const hayMensuales = (AppState.presupuesto || []).some(p => p.mes);
+  const hint = (!tienePropio && hayMensuales)
+    ? `<span class="pres-hint">heredado del mes anterior · guarda para fijarlo aquí</span>`
+    : '';
 
   const gastosPorCat = {};
   txMes.filter(t => t.tipo === 'Gasto').forEach(t => {
@@ -16,7 +25,7 @@ function renderPresupuesto() {
 
   container.innerHTML = `
     <div class="section-header">
-      <span class="section-title">🗂️ Presupuesto — ${getMesNombre(mes)} ${anio}</span>
+      <span class="section-title">🗂️ Presupuesto — ${getMesNombre(mes)} ${anio} ${hint}</span>
       <button class="btn btn-success" id="btnGuardarPresupuesto">💾 Guardar cambios</button>
     </div>
 
@@ -201,6 +210,8 @@ async function handleSavePresupuesto() {
   btn.disabled = true;
   btn.textContent = '⏳ Guardando…';
 
+  const periodo = periodoStr(AppState.mes, AppState.anio);
+
   const nuevoPresupuesto = [];
   document.querySelectorAll('.budget-input').forEach(input => {
     nuevoPresupuesto.push({
@@ -210,9 +221,14 @@ async function handleSavePresupuesto() {
   });
 
   try {
-    await API.updatePresupuesto(nuevoPresupuesto);
-    AppState.presupuesto = nuevoPresupuesto;
-    showToast('Presupuesto guardado correctamente', 'success');
+    await API.updatePresupuesto(periodo, nuevoPresupuesto);
+    // Actualiza el cache local: quita las filas de este mes y agrega las nuevas
+    AppState.presupuesto = (AppState.presupuesto || []).filter(p => p.mes !== periodo);
+    nuevoPresupuesto.forEach(p => AppState.presupuesto.push({
+      mes: periodo, categoria: p.categoria, presupuesto: p.presupuesto
+    }));
+    showToast(`Presupuesto de ${getMesNombre(AppState.mes)} ${AppState.anio} guardado`, 'success');
+    renderPresupuesto(); // refleja que este mes ya tiene presupuesto propio
   } catch (err) {
     showToast('Error al guardar presupuesto: ' + err.message, 'error');
   }

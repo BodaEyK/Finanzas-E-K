@@ -54,6 +54,39 @@ function transaccionesDelMes(transacciones, mes, anio) {
   });
 }
 
+function periodoStr(mes, anio) {
+  return `${anio}-${String(mes).padStart(2, '0')}`;
+}
+
+/* Presupuesto efectivo para un mes:
+   1) el propio del mes; si no existe →
+   2) el del mes anterior más cercano que sí tenga; si no hay previos →
+   3) el más antiguo disponible.
+   Filas sin 'mes' (datos de muestra locales o pre-migración) se tratan como globales. */
+function effectivePresupuesto(raw, mes, anio) {
+  const periodo = periodoStr(mes, anio);
+  const conMes  = (raw || []).filter(p => p.mes);
+
+  if (conMes.length === 0) {
+    return (raw || []).map(p => ({ categoria: p.categoria, presupuesto: Number(p.presupuesto) }));
+  }
+
+  const meses = [...new Set(conMes.map(p => p.mes))].sort();
+  let elegido = meses.includes(periodo) ? periodo : null;
+  if (!elegido) {
+    const previos = meses.filter(m => m <= periodo);
+    elegido = previos.length ? previos[previos.length - 1] : meses[0];
+  }
+
+  return conMes
+    .filter(p => p.mes === elegido)
+    .map(p => ({ categoria: p.categoria, presupuesto: Number(p.presupuesto) }));
+}
+
+function presupuestoDelPeriodo(mes, anio) {
+  return effectivePresupuesto(AppState.presupuesto, mes, anio);
+}
+
 function buildCategoryOptions(selectedTipo, selectedCat) {
   const cats = selectedTipo === 'Ingreso' ? CATEGORIAS_INGRESO : CATEGORIAS_GASTO;
   return cats.map(c =>

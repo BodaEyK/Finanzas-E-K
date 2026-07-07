@@ -140,13 +140,14 @@ const API = {
     return data.presupuesto || [];
   },
 
-  /** Actualiza el presupuesto */
-  async updatePresupuesto(presupuesto) {
+  /** Actualiza el presupuesto de un mes específico (mes = 'yyyy-MM') */
+  async updatePresupuesto(mes, presupuesto) {
     if (_useLocal()) {
-      _localPresupuesto = JSON.parse(JSON.stringify(presupuesto));
+      _localPresupuesto = (_localPresupuesto || []).filter(p => p.mes && p.mes !== mes);
+      presupuesto.forEach(p => _localPresupuesto.push({ mes, categoria: p.categoria, presupuesto: p.presupuesto }));
       return { success: true };
     }
-    return _appsScriptPost({ action: 'updatePresupuesto', presupuesto });
+    return _appsScriptPost({ action: 'updatePresupuesto', mes, presupuesto });
   },
 
   /** Valida una clave de acceso contra el backend (para la pantalla de login).
