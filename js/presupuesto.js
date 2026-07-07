@@ -8,7 +8,12 @@ function renderPresupuesto() {
 
   const { mes, anio, transacciones } = AppState;
   const txMes = transaccionesDelMes(transacciones, mes, anio);
-  const presupuesto = presupuestoDelPeriodo(mes, anio);
+
+  // Siempre mostrar TODAS las categorías de gasto (con su monto efectivo o 0),
+  // así se puede armar el presupuesto aunque el mes esté vacío.
+  const efectivo = presupuestoDelPeriodo(mes, anio);
+  const mapa = Object.fromEntries(efectivo.map(p => [p.categoria, p.presupuesto]));
+  const presupuesto = CATEGORIAS_GASTO.map(cat => ({ categoria: cat, presupuesto: mapa[cat] || 0 }));
 
   // ¿Este mes ya tiene presupuesto propio, o se está heredando de otro mes?
   const periodo      = periodoStr(mes, anio);
