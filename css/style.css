@@ -14,6 +14,7 @@
   --color-green:     #16A34A;
   --color-red:       #DC2626;
   --color-amber:     #D97706;
+  --color-cyan:      #06B6D4;
   --color-text:      #F1F5F9;
   --color-muted:     #94A3B8;
   --color-muted2:    #64748B;
@@ -282,7 +283,7 @@ select option { background: var(--color-surface); }
    ============================================================ */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -310,6 +311,8 @@ select option { background: var(--color-surface); }
 .kpi-card.kpi-expense::before { background: var(--color-red); }
 .kpi-card.kpi-balance::before { background: var(--color-primary); }
 .kpi-card.kpi-savings::before { background: var(--color-amber); }
+.kpi-card.kpi-saldo::before   { background: var(--color-cyan); }
+.kpi-card.kpi-saldo.neg::before { background: var(--color-red); }
 
 .kpi-label {
   font-size: 12px;
@@ -329,6 +332,8 @@ select option { background: var(--color-surface); }
 .kpi-card.kpi-expense .kpi-value { color: var(--color-red); }
 .kpi-card.kpi-balance .kpi-value { color: var(--color-primary); }
 .kpi-card.kpi-savings .kpi-value { color: var(--color-amber); }
+.kpi-card.kpi-saldo   .kpi-value { color: var(--color-cyan); }
+.kpi-card.kpi-saldo.neg .kpi-value { color: var(--color-red); }
 
 .kpi-sub {
   font-size: 11px;

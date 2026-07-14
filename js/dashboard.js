@@ -26,12 +26,21 @@ function renderDashboard() {
     ? ((balance / totalIngresos) * 100).toFixed(1)
     : '0.0';
 
+  // Saldo arrastrado desde los meses anteriores + el balance de este mes
+  const saldoAnt   = saldoAnterior(transacciones, mes, anio);
+  const saldoFinal = saldoAnt + balance;
+  const subSaldo   = saldoAnt !== 0
+    ? `Viene ${formatMoney(saldoAnt)} del mes anterior`
+    : 'Sin arrastre previo';
+  const claseSaldo = saldoFinal >= 0 ? 'kpi-saldo' : 'kpi-saldo neg';
+
   container.innerHTML = `
     <!-- KPI Cards -->
     <div class="kpi-grid">
       ${kpiCard('Ingresos del Mes', formatMoney(totalIngresos), 'kpi-income',  getMesNombre(mes) + ' ' + anio, '↑')}
       ${kpiCard('Gastos del Mes',   formatMoney(totalGastos),  'kpi-expense', getMesNombre(mes) + ' ' + anio, '↓')}
-      ${kpiCard('Balance',          formatMoney(balance),      'kpi-balance', balance >= 0 ? 'Positivo' : 'Negativo', balance >= 0 ? '✓' : '!')}
+      ${kpiCard('Balance del Mes',  formatMoney(balance),      'kpi-balance', balance >= 0 ? 'Positivo' : 'Negativo', balance >= 0 ? '✓' : '!')}
+      ${kpiCard('Saldo Acumulado',  formatMoney(saldoFinal),   claseSaldo,    subSaldo, '🏦')}
       ${kpiCard('Tasa de Ahorro',   tasaAhorro + '%',          'kpi-savings', 'Del total de ingresos', '🎯')}
     </div>
 

@@ -58,6 +58,18 @@ function periodoStr(mes, anio) {
   return `${anio}-${String(mes).padStart(2, '0')}`;
 }
 
+/* Saldo que viene arrastrado de TODOS los meses anteriores al indicado.
+   Se calcula sobre la marcha (no se guarda), así siempre cuadra aunque
+   se editen transacciones del pasado. */
+function saldoAnterior(transacciones, mes, anio) {
+  const periodo = periodoStr(mes, anio);
+  return (transacciones || []).reduce((acc, t) => {
+    const p = String(t.fecha).slice(0, 7); // 'yyyy-MM'
+    if (p >= periodo) return acc;          // solo meses previos
+    return acc + (t.tipo === 'Ingreso' ? Number(t.monto) : -Number(t.monto));
+  }, 0);
+}
+
 /* Presupuesto efectivo para un mes:
    1) el propio del mes; si no existe →
    2) el del mes anterior más cercano que sí tenga; si no hay previos →
