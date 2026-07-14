@@ -188,6 +188,8 @@ function renderRegistro() {
       <span style="margin-left:auto;font-size:12px;color:var(--color-muted)">
         ${txFiltradas.length} de ${txMes.length} · <strong>${formatMoney(totalFiltrado)}</strong> en ${getMesNombre(mes)} ${anio}
       </span>
+
+      <button class="btn btn-ghost" id="btnExportar" title="Exportar a Excel">⬇ Excel</button>
     </div>
 
     <!-- Tabla -->
@@ -225,6 +227,9 @@ function renderRegistro() {
     _filtroCategoria = e.target.value;
     renderRegistro();
   });
+
+  // Exportar a Excel
+  document.getElementById('btnExportar').addEventListener('click', openExportModal);
 
   // Submit formulario
   document.getElementById('formNuevaTx').addEventListener('submit', handleAddTx);
