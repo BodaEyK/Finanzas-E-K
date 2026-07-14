@@ -749,8 +749,22 @@ tbody td {
   font-weight: 700;
 }
 /* ============================================================
-   EXPORTAR A EXCEL — opciones del modal
+   EXPORTAR A EXCEL
    ============================================================ */
+/* Botón "⬇ Excel": texto y flecha en verde */
+.btn-excel {
+  color: #22C55E;
+  border-color: rgba(34,197,94,.45);
+  font-weight: 700;
+}
+.btn-excel:hover {
+  color: #fff;
+  background: var(--color-green);
+  border-color: var(--color-green);
+  opacity: 1;
+}
+
+/* Opciones del modal */
 .export-opts {
   display: flex;
   flex-direction: column;

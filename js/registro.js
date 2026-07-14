@@ -189,7 +189,7 @@ function renderRegistro() {
         ${txFiltradas.length} de ${txMes.length} · <strong>${formatMoney(totalFiltrado)}</strong> en ${getMesNombre(mes)} ${anio}
       </span>
 
-      <button class="btn btn-ghost" id="btnExportar" title="Exportar a Excel">⬇ Excel</button>
+      <button class="btn btn-ghost btn-excel" id="btnExportar" title="Exportar a Excel">⬇ Excel</button>
     </div>
 
     <!-- Tabla -->
