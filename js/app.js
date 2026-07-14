@@ -16,6 +16,7 @@ const AppState = {
   currentUser: null,
   offline: false,   // true si estamos mostrando datos de la caché
   cacheTs: null,    // cuándo se guardó esa caché
+  sugerencias: [],  // descripciones ya usadas (para el autocompletado)
 };
 
 /* ============================================================
@@ -268,8 +269,8 @@ async function loadData() {
   }
 
   AppState.loading = false;
+  AppState.sugerencias = sugerenciasDescripcion(AppState.transacciones);
   updateOfflineBanner();
-  updateDatalistDescripciones();
 }
 
 /* ============================================================
@@ -314,17 +315,23 @@ function sugerenciasDescripcion(transacciones) {
   );
 }
 
-/* Datalist global: lo usan tanto el form de alta como el modal de edición */
-function updateDatalistDescripciones() {
-  let dl = document.getElementById('descSugerencias');
-  if (!dl) {
-    dl = document.createElement('datalist');
-    dl.id = 'descSugerencias';
-    document.body.appendChild(dl);
+/* Busca entre las sugerencias las que coinciden con lo tecleado.
+   Prioriza las que EMPIEZAN por el término, luego las que lo contienen.
+   Devuelve pocas (máx. 8) para que la lista sea usable con miles de registros. */
+function buscarSugerencias(termino, limite = 8) {
+  const term = String(termino || '').trim().toLowerCase();
+  if (term.length < 2) return [];   // no molestar hasta la 2ª letra
+
+  const empieza  = [];
+  const contiene = [];
+
+  for (const s of (AppState.sugerencias || [])) {
+    const d = s.descripcion.toLowerCase();
+    if (d.startsWith(term))      empieza.push(s);
+    else if (d.includes(term))   contiene.push(s);
+    if (empieza.length >= limite) break;
   }
-  dl.innerHTML = sugerenciasDescripcion(AppState.transacciones)
-    .map(s => `<option value="${escapeHtml(s.descripcion)}">${escapeHtml(s.categoria)} · ${formatMoney(s.monto)}</option>`)
-    .join('');
+  return [...empieza, ...contiene].slice(0, limite);
 }
 
 /* Aviso visible arriba cuando estamos trabajando sin conexión */

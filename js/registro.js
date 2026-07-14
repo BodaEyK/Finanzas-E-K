@@ -6,6 +6,89 @@ let _filtroTipo = 'Todos';
 let _filtroCategoria = 'Todas';
 let _formCollapsed = window.innerWidth < 640;
 
+/* ============================================================
+   AUTOCOMPLETADO DE DESCRIPCIÓN
+   Desplegable propio (no el nativo del navegador): solo aparece al escribir
+   2+ letras, muestra máx. 8 coincidencias y respeta el tema oscuro.
+   Escala bien aunque haya miles de descripciones distintas.
+   ============================================================ */
+function attachAutocomplete(input, { autoFill = false } = {}) {
+  if (!input) return;
+
+  // Envolver el input para poder posicionar la lista debajo
+  const wrap = document.createElement('div');
+  wrap.className = 'ac-wrap';
+  input.parentNode.insertBefore(wrap, input);
+  wrap.appendChild(input);
+
+  const list = document.createElement('div');
+  list.className = 'ac-list hidden';
+  wrap.appendChild(list);
+
+  let items  = [];
+  let activo = -1;
+
+  const cerrar = () => { list.classList.add('hidden'); activo = -1; };
+
+  const pintar = () => {
+    if (!items.length) { cerrar(); return; }
+    list.innerHTML = items.map((s, i) => `
+      <div class="ac-item ${i === activo ? 'active' : ''}" data-i="${i}">
+        <span class="ac-desc">${escapeHtml(s.descripcion)}</span>
+        <span class="ac-meta">${escapeHtml(s.categoria)} · ${formatMoney(s.monto)}${s.veces > 1 ? ` · ${s.veces}×` : ''}</span>
+      </div>`).join('');
+    list.classList.remove('hidden');
+  };
+
+  const elegir = (s) => {
+    if (!s) return;
+    input.value = s.descripcion;
+    cerrar();
+    if (autoFill) aplicarSugerencia(s);
+  };
+
+  input.addEventListener('input', () => {
+    items  = buscarSugerencias(input.value);
+    activo = -1;
+    pintar();
+  });
+
+  // Navegación con teclado: ↑ ↓ Enter Esc
+  input.addEventListener('keydown', e => {
+    if (list.classList.contains('hidden') || !items.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault(); activo = (activo + 1) % items.length; pintar();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault(); activo = (activo - 1 + items.length) % items.length; pintar();
+    } else if (e.key === 'Enter' && activo >= 0) {
+      e.preventDefault(); elegir(items[activo]);   // no envía el form
+    } else if (e.key === 'Escape') {
+      cerrar();
+    }
+  });
+
+  // mousedown (no click) para que el blur no cierre la lista antes de tiempo
+  list.addEventListener('mousedown', e => {
+    const it = e.target.closest('.ac-item');
+    if (!it) return;
+    e.preventDefault();
+    elegir(items[Number(it.dataset.i)]);
+  });
+
+  input.addEventListener('blur', () => setTimeout(cerrar, 120));
+}
+
+/* Rellena tipo/categoría (y monto si está vacío) al elegir una sugerencia */
+function aplicarSugerencia(s) {
+  const selTipo  = document.getElementById('txTipo');
+  const selCat   = document.getElementById('txCategoria');
+  const inpMonto = document.getElementById('txMonto');
+
+  if (selTipo) selTipo.value = s.tipo;
+  if (selCat)  selCat.innerHTML = buildCategoryOptions(s.tipo, s.categoria);
+  if (inpMonto && !inpMonto.value) inpMonto.value = s.monto;
+}
+
 /* Aplica los filtros activos (tipo + categoría) */
 function filtrarTx(txMesAll) {
   let r = _filtroTipo === 'Todos'
@@ -53,8 +136,8 @@ function renderRegistro() {
           <div class="form-group" style="flex:2;min-width:200px">
             <label class="form-label" for="txDescripcion">Descripción</label>
             <input type="text" id="txDescripcion" class="form-control"
-              list="descSugerencias" autocomplete="off"
-              placeholder="Ej: Mototaxi (se autocompleta)" required />
+              autocomplete="off"
+              placeholder="Ej: Mototaxi" required />
           </div>
           <div class="form-group">
             <label class="form-label" for="txTipo">Tipo</label>
@@ -126,22 +209,8 @@ function renderRegistro() {
     catSelect.innerHTML = buildCategoryOptions(e.target.value, '');
   });
 
-  // Autocompletado: al escribir/elegir una descripción ya usada, rellena
-  // tipo y categoría (y el monto solo si está vacío, para no pisar lo tuyo)
-  document.getElementById('txDescripcion').addEventListener('input', e => {
-    const val   = e.target.value.trim().toLowerCase();
-    if (!val) return;
-    const match = sugerenciasDescripcion(AppState.transacciones)
-      .find(s => s.descripcion.toLowerCase() === val);
-    if (!match) return;
-
-    document.getElementById('txTipo').value = match.tipo;
-    document.getElementById('txCategoria').innerHTML =
-      buildCategoryOptions(match.tipo, match.categoria);
-
-    const inpMonto = document.getElementById('txMonto');
-    if (!inpMonto.value) inpMonto.value = match.monto;
-  });
+  // Autocompletado propio en la descripción (con autorelleno de tipo/cat/monto)
+  attachAutocomplete(document.getElementById('txDescripcion'), { autoFill: true });
 
   // Filtros
   container.querySelectorAll('.filter-btn').forEach(btn => {
@@ -276,7 +345,7 @@ function openEditModal(id) {
         </div>
         <div class="form-group" style="flex:2">
           <label class="form-label">Descripción</label>
-          <input type="text" id="editDesc" class="form-control" list="descSugerencias"
+          <input type="text" id="editDesc" class="form-control"
             autocomplete="off" value="${escapeHtml(tx.descripcion)}" required />
         </div>
         <div class="form-group">
@@ -308,6 +377,9 @@ function openEditModal(id) {
     </form>`;
 
   openModal('Editar Transacción', body);
+
+  // Sugerencias también al editar (sin autorellenar: aquí estás corrigiendo algo puntual)
+  attachAutocomplete(document.getElementById('editDesc'));
 
   document.getElementById('editTipo').addEventListener('change', e => {
     document.getElementById('editCategoria').innerHTML = buildCategoryOptions(e.target.value, '');

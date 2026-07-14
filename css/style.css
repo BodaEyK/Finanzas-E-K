@@ -748,6 +748,57 @@ tbody td {
   font-size: 16px;
   font-weight: 700;
 }
+/* ============================================================
+   AUTOCOMPLETADO DE DESCRIPCIÓN
+   ============================================================ */
+.ac-wrap {
+  position: relative;
+  width: 100%;
+}
+.ac-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 600;
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.ac-list.hidden { display: none; }
+
+.ac-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.ac-item:hover,
+.ac-item.active {
+  background: var(--color-primary);
+}
+.ac-desc {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ac-meta {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.ac-item:hover .ac-meta,
+.ac-item.active .ac-meta { color: rgba(255,255,255,.85); }
+
 /* Aviso de sin conexión */
 .offline-banner {
   display: flex;
