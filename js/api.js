@@ -33,23 +33,11 @@ const SAMPLE_DATA = {
     { id:'t14', fecha:'2026-05-24', descripcion:'Salida cine familia',    categoria:'Entretenimiento',      tipo:'Gasto',   monto:55,   notas:'Cineplanet' },
     { id:'t15', fecha:'2026-05-26', descripcion:'Ahorro cuenta ahorros',  categoria:'Ahorro/Inversión',     tipo:'Gasto',   monto:400,  notas:'Depósito CTS' },
   ],
-  presupuesto: [
-    { categoria:'Vivienda',           presupuesto:700  },
-    { categoria:'Alimentación',       presupuesto:600  },
-    { categoria:'Transporte',         presupuesto:160  },
-    { categoria:'Salud',              presupuesto:100  },
-    { categoria:'Educación',          presupuesto:80   },
-    { categoria:'Servicios',          presupuesto:100  },
-    { categoria:'Comunicaciones',     presupuesto:120  },
-    { categoria:'Ropa y Calzado',     presupuesto:150  },
-    { categoria:'Entretenimiento',    presupuesto:80   },
-    { categoria:'Deudas/Cuotas',      presupuesto:350  },
-    { categoria:'Bebé/Familia',       presupuesto:200  },
-    { categoria:'Regalos/Ocasiones',  presupuesto:50   },
-    { categoria:'Ahorro/Inversión',   presupuesto:400  },
-    { categoria:'Emergencias',        presupuesto:100  },
-    { categoria:'Otros Gastos',       presupuesto:80   },
-  ]
+  /* Derivado de categorias.js — no repetir la lista aquí */
+  presupuesto: CATEGORIAS_GASTO.map(c => ({
+    categoria:   c,
+    presupuesto: PRESUPUESTO_DEFAULT[c] || 0,
+  }))
 };
 
 /* Copia local mutable (para simular CRUD sin backend) */

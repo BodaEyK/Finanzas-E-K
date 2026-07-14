@@ -247,22 +247,14 @@ function setupSheets() {
   if (!sheetTx) sheetTx = ss.insertSheet(SHEET_TX);
   sheetTx.getRange(1, 1, 1, 7).setValues([['ID','Fecha','Descripcion','Categoria','Tipo','Monto','Notas']]);
 
-  // Hoja Presupuesto — ahora con columna Mes (yyyy-MM)
+  // Hoja Presupuesto — con columna Mes (yyyy-MM)
   let sheetBudget = ss.getSheetByName(SHEET_BUDGET);
   if (!sheetBudget) sheetBudget = ss.insertSheet(SHEET_BUDGET);
   sheetBudget.getRange(1, 1, 1, 3).setValues([['Mes','Categoria','Presupuesto']]);
 
-  // Insertar categorías por defecto para el mes en curso
-  const periodo = Utilities.formatDate(new Date(), 'America/Lima', 'yyyy-MM');
-  const categorias = [
-    ['Vivienda',700],['Alimentación',600],['Transporte',160],
-    ['Salud',100],['Educación',80],['Servicios',100],['Comunicaciones',120],
-    ['Ropa y Calzado',150],['Entretenimiento',80],['Deudas/Cuotas',350],
-    ['Bebé/Familia',200],['Regalos/Ocasiones',50],['Ahorro/Inversión',400],
-    ['Emergencias',100],['Otros Gastos',80]
-  ];
-  const rows = categorias.map(c => [periodo, c[0], c[1]]);
-  sheetBudget.getRange(2, 1, rows.length, 3).setValues(rows);
+  // Sin categorías sembradas a propósito: la app (js/categorias.js) es la
+  // única fuente de verdad y arma el presupuesto desde vacío en la pantalla
+  // Presupuesto. Así no hay dos listas de categorías que se desincronicen.
 
   Logger.log('Hojas creadas correctamente.');
 }

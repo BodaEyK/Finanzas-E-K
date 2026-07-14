@@ -2,19 +2,7 @@
    FINANZAS E&K — APP.JS (navegación SPA + lógica global)
    ============================================================ */
 
-/* ============================================================
-   CATEGORÍAS
-   ============================================================ */
-const CATEGORIAS_INGRESO = [
-  'Sueldo', 'Negocio/Emprendimiento', 'Freelance/Extra', 'Otros Ingresos'
-];
-const CATEGORIAS_GASTO = [
-  'Vivienda', 'Alimentación', 'Transporte', 'Salud', 'Educación',
-  'Servicios', 'Comunicaciones', 'Ropa y Calzado', 'Entretenimiento',
-  'Deudas/Cuotas', 'Bebé/Familia', 'Regalos/Ocasiones', 'Ahorro/Inversión',
-  'Emergencias', 'Otros Gastos'
-];
-const TODAS_CATEGORIAS = [...CATEGORIAS_INGRESO, ...CATEGORIAS_GASTO];
+/* Las categorías viven en js/categorias.js (única fuente de verdad) */
 
 /* ============================================================
    ESTADO GLOBAL
@@ -26,6 +14,8 @@ const AppState = {
   presupuesto: [],
   loading: false,
   currentUser: null,
+  offline: false,   // true si estamos mostrando datos de la caché
+  cacheTs: null,    // cuándo se guardó esa caché
 };
 
 /* ============================================================
@@ -59,11 +49,10 @@ function periodoStr(mes, anio) {
 }
 
 /* ── AHORRO vs GASTO ──────────────────────────────────────────
-   "Ahorro/Inversión" NO es un gasto: es un traspaso. El dinero no se fue,
-   solo cambió de bolsillo. Por eso no reduce tu patrimonio ni tu tasa de
-   ahorro. (Sí se sigue midiendo como meta en la pantalla Presupuesto.) */
-const CATEGORIA_AHORRO = 'Ahorro/Inversión';
-
+   "Ahorro/Inversión" (CATEGORIA_AHORRO, en categorias.js) NO es un gasto:
+   es un traspaso. El dinero no se fue, solo cambió de bolsillo. Por eso no
+   reduce tu patrimonio ni tu tasa de ahorro. (Sí se mide como meta en la
+   pantalla Presupuesto.) */
 function esAhorro(t) {
   return t.tipo === 'Gasto' && t.categoria === CATEGORIA_AHORRO;
 }
@@ -227,8 +216,31 @@ function closeSidebar() {
 /* ============================================================
    CARGA DE DATOS
    ============================================================ */
+/* Caché local: guarda la última copia buena para sobrevivir a un backend caído */
+const CACHE_KEY = 'fek_cache';
+
+function saveCache(transacciones, presupuesto) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      ts: Date.now(), transacciones, presupuesto
+    }));
+  } catch { /* sin espacio o modo privado: no es crítico */ }
+}
+
+function readCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function loadData() {
   AppState.loading = true;
+  AppState.offline = false;
+  AppState.cacheTs = null;
+
   try {
     const [txs, budget] = await Promise.all([
       API.getTransacciones(),
@@ -236,10 +248,55 @@ async function loadData() {
     ]);
     AppState.transacciones = txs;
     AppState.presupuesto   = budget;
+    saveCache(txs, budget);            // copia de seguridad para la próxima
   } catch (err) {
-    showToast('Error al cargar datos: ' + err.message, 'error');
+    const cache = readCache();
+    AppState.offline = true;
+
+    if (cache) {
+      // Backend caído, pero tenemos la última copia buena → app usable
+      AppState.transacciones = cache.transacciones || [];
+      AppState.presupuesto   = cache.presupuesto   || [];
+      AppState.cacheTs       = cache.ts;
+      showToast('Sin conexión — mostrando datos guardados', 'warning');
+    } else {
+      // Ni backend ni caché: no hay nada que mostrar
+      AppState.transacciones = [];
+      AppState.presupuesto   = [];
+      showToast('Error al cargar datos: ' + err.message, 'error');
+    }
   }
+
   AppState.loading = false;
+  updateOfflineBanner();
+}
+
+/* Aviso visible arriba cuando estamos trabajando sin conexión */
+function updateOfflineBanner() {
+  document.getElementById('offlineBanner')?.remove();
+  if (!AppState.offline) return;
+
+  const main = document.querySelector('.content-area');
+  if (!main) return;
+
+  const cuando = AppState.cacheTs
+    ? new Date(AppState.cacheTs).toLocaleString('es-PE')
+    : null;
+
+  const banner = document.createElement('div');
+  banner.id = 'offlineBanner';
+  banner.className = 'offline-banner';
+  banner.innerHTML = `
+    <span>
+      ⚠️ <strong>Sin conexión con el servidor.</strong>
+      ${cuando
+        ? `Mostrando los datos guardados del ${cuando}. Los cambios <strong>no se guardarán</strong> hasta recuperar la conexión.`
+        : `Y no hay datos guardados en este dispositivo.`}
+    </span>
+    <button class="btn btn-ghost" id="btnReintentar">↻ Reintentar</button>`;
+
+  main.insertBefore(banner, main.firstChild);
+  document.getElementById('btnReintentar')?.addEventListener('click', refreshAndRender);
 }
 
 async function refreshAndRender() {

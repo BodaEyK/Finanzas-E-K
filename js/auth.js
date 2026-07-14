@@ -46,6 +46,7 @@ const Auth = {
   logout() {
     localStorage.removeItem(AUTH_CONFIG.sessionKey);
     localStorage.removeItem(AUTH_CONFIG.tokenKey);
+    localStorage.removeItem('fek_cache'); // no dejar datos financieros cacheados
     location.reload();
   },
 

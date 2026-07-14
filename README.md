@@ -116,23 +116,16 @@ Finanzas-E-K/
 
 ## Categorías
 
-| Ingresos | Gastos |
-|---|---|
-| Sueldo | Vivienda |
-| Negocio/Emprendimiento | Alimentación |
-| Freelance/Extra | Transporte |
-| Otros Ingresos | Salud |
-| | Educación |
-| | Servicios |
-| | Comunicaciones |
-| | Ropa y Calzado |
-| | Entretenimiento |
-| | Deudas/Cuotas |
-| | Bebé/Familia |
-| | Regalos/Ocasiones |
-| | Ahorro/Inversión |
-| | Emergencias |
-| | Otros Gastos |
+> **Fuente única de verdad: [`js/categorias.js`](js/categorias.js)**
+>
+> Para agregar, quitar o renombrar una categoría, edita **solo ese archivo**.
+> Los formularios, el presupuesto, las gráficas y los datos de muestra se
+> alimentan de ahí automáticamente. No hay listas duplicadas en otros sitios.
+
+Nota: `Ahorro/Inversión` es una categoría **especial**. Aunque se registra como
+"Gasto", la app la trata como un **traspaso**, no como consumo: no reduce tu
+saldo acumulado ni tu tasa de ahorro (el dinero no se fue, solo cambió de
+bolsillo). Sí se mide como meta en la pantalla Presupuesto.
 
 ---
 

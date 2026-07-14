@@ -748,6 +748,23 @@ tbody td {
   font-size: 16px;
   font-weight: 700;
 }
+/* Aviso de sin conexión */
+.offline-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: rgba(217,119,6,.12);
+  border: 1px solid var(--color-amber);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--color-text);
+}
+.offline-banner strong { color: var(--color-amber); }
+
 /* Modal de detalle por categoría */
 .detalle-scroll {
   max-height: 320px;
