@@ -2,8 +2,10 @@
    FINANZAS E&K — DASHBOARD.JS
    ============================================================ */
 
-let _chartDonut  = null;
-let _chartBarras = null;
+let _chartDonut     = null;
+let _chartBarras    = null;
+let _chartCategoria = null;
+let _catHistorica   = null; // categoría elegida en el histórico
 
 function renderDashboard() {
   const container = document.getElementById('dashboard-content');
@@ -29,6 +31,17 @@ function renderDashboard() {
   const subTasa = ahorroMes > 0
     ? `Incluye ${formatMoney(ahorroMes)} en Ahorro/Inversión`
     : 'Del total de ingresos';
+
+  // Categoría del histórico: la elegida, o por defecto la de mayor gasto del mes
+  if (!_catHistorica || !CATEGORIAS_GASTO.includes(_catHistorica)) {
+    const porCat = {};
+    txMes.filter(t => t.tipo === 'Gasto' && !esAhorro(t)).forEach(t => {
+      porCat[t.categoria] = (porCat[t.categoria] || 0) + Number(t.monto);
+    });
+    const top = Object.entries(porCat).sort((a, b) => b[1] - a[1])[0];
+    _catHistorica = top ? top[0] : CATEGORIAS_GASTO[0];
+  }
+  const catSel = _catHistorica;
 
   // Saldo arrastrado desde los meses anteriores + el balance de este mes
   const saldoAnt   = saldoAnterior(transacciones, mes, anio);
@@ -64,6 +77,22 @@ function renderDashboard() {
       </div>
     </div>
 
+    <!-- Histórico de una categoría -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🔎 Evolución por Categoría — últimos 6 meses</span>
+        <select id="selectCatHist" class="period-select">
+          ${CATEGORIAS_GASTO.map(c =>
+            `<option value="${escapeHtml(c)}" ${c === catSel ? 'selected' : ''}>${escapeHtml(c)}</option>`
+          ).join('')}
+        </select>
+      </div>
+      <div style="padding:20px">
+        <canvas id="chartCategoria" style="max-height:200px"></canvas>
+        <div id="catHistResumen" class="cat-hist-resumen"></div>
+      </div>
+    </div>
+
     <!-- Tabla Presupuesto vs Real -->
     <div class="card">
       <div class="card-header">
@@ -79,6 +108,12 @@ function renderDashboard() {
   requestAnimationFrame(() => {
     buildDonutChart(txMes);
     buildBarChart(transacciones, mes, anio);
+    buildCategoriaChart(transacciones, mes, anio, catSel);
+
+    document.getElementById('selectCatHist')?.addEventListener('change', e => {
+      _catHistorica = e.target.value;
+      buildCategoriaChart(transacciones, mes, anio, _catHistorica);
+    });
   });
 }
 
@@ -223,6 +258,77 @@ function buildDonutChart(txMes) {
           callbacks: {
             label: ctx => ` ${ctx.label}: S/ ${ctx.parsed.toFixed(2)}`
           }
+        }
+      }
+    }
+  });
+}
+
+/* ---- Histórico de UNA categoría (últimos 6 meses) ---- */
+function buildCategoriaChart(transacciones, mesActual, anioActual, categoria) {
+  const canvas = document.getElementById('chartCategoria');
+  if (!canvas) return;
+
+  const meses = [];
+  for (let i = 5; i >= 0; i--) {
+    let m = mesActual - i;
+    let a = anioActual;
+    if (m <= 0) { m += 12; a -= 1; }
+    meses.push({ mes: m, anio: a, label: getMesNombre(m).substring(0, 3) + ' ' + a });
+  }
+
+  const data = meses.map(({ mes, anio }) =>
+    transaccionesDelMes(transacciones, mes, anio)
+      .filter(t => t.tipo === 'Gasto' && t.categoria === categoria)
+      .reduce((s, t) => s + Number(t.monto), 0)
+  );
+
+  // Resumen: total y promedio de los 6 meses
+  const total    = data.reduce((s, v) => s + v, 0);
+  const promedio = total / meses.length;
+  const resumen  = document.getElementById('catHistResumen');
+  if (resumen) {
+    resumen.innerHTML = total > 0
+      ? `Total 6 meses: <strong>${formatMoney(total)}</strong> · Promedio mensual: <strong>${formatMoney(promedio)}</strong>`
+      : `Sin gastos registrados en <strong>${escapeHtml(categoria)}</strong> estos 6 meses`;
+  }
+
+  if (_chartCategoria) { _chartCategoria.destroy(); _chartCategoria = null; }
+
+  _chartCategoria = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: meses.map(m => m.label),
+      datasets: [{
+        label: categoria,
+        data,
+        backgroundColor: 'rgba(6,182,212,.7)',
+        borderColor: '#06B6D4',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: ctx => ` ${categoria}: S/ ${ctx.parsed.y.toFixed(2)}` }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#64748B', font: { size: 11 } },
+          grid:  { color: 'rgba(255,255,255,.05)' }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: '#64748B',
+            font: { size: 11 },
+            callback: v => 'S/ ' + v.toLocaleString('es-PE')
+          },
+          grid: { color: 'rgba(255,255,255,.05)' }
         }
       }
     }

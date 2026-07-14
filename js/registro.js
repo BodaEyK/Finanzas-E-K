@@ -3,7 +3,19 @@
    ============================================================ */
 
 let _filtroTipo = 'Todos';
+let _filtroCategoria = 'Todas';
 let _formCollapsed = window.innerWidth < 640;
+
+/* Aplica los filtros activos (tipo + categoría) */
+function filtrarTx(txMesAll) {
+  let r = _filtroTipo === 'Todos'
+    ? txMesAll
+    : txMesAll.filter(t => t.tipo === _filtroTipo);
+  if (_filtroCategoria !== 'Todas') {
+    r = r.filter(t => t.categoria === _filtroCategoria);
+  }
+  return r;
+}
 
 function localDateString() {
   const d = new Date();
@@ -19,6 +31,9 @@ function renderRegistro() {
 
   const { mes, anio, transacciones } = AppState;
   const txMes = transaccionesDelMes(transacciones, mes, anio);
+
+  const txFiltradas   = filtrarTx(txMes);
+  const totalFiltrado = txFiltradas.reduce((s, t) => s + Number(t.monto), 0);
 
   container.innerHTML = `
     <!-- Formulario nueva transacción -->
@@ -78,8 +93,16 @@ function renderRegistro() {
       <button class="filter-btn ${_filtroTipo === 'Todos' ? 'active' : ''}" data-filtro="Todos">Todos</button>
       <button class="filter-btn ${_filtroTipo === 'Ingreso' ? 'active' : ''}" data-filtro="Ingreso">Ingresos</button>
       <button class="filter-btn ${_filtroTipo === 'Gasto' ? 'active' : ''}" data-filtro="Gasto">Gastos</button>
+
+      <select id="filtroCategoria" class="period-select">
+        <option value="Todas">Todas las categorías</option>
+        ${TODAS_CATEGORIAS.map(c =>
+          `<option value="${escapeHtml(c)}" ${c === _filtroCategoria ? 'selected' : ''}>${escapeHtml(c)}</option>`
+        ).join('')}
+      </select>
+
       <span style="margin-left:auto;font-size:12px;color:var(--color-muted)">
-        ${txMes.length} transacción${txMes.length !== 1 ? 'es' : ''} en ${getMesNombre(mes)} ${anio}
+        ${txFiltradas.length} de ${txMes.length} · <strong>${formatMoney(totalFiltrado)}</strong> en ${getMesNombre(mes)} ${anio}
       </span>
     </div>
 
@@ -110,15 +133,19 @@ function renderRegistro() {
     });
   });
 
+  // Filtro por categoría
+  document.getElementById('filtroCategoria').addEventListener('change', e => {
+    _filtroCategoria = e.target.value;
+    renderRegistro();
+  });
+
   // Submit formulario
   document.getElementById('formNuevaTx').addEventListener('submit', handleAddTx);
 }
 
 /* ---- Tabla de transacciones ---- */
 function buildTransaccionesTable(txMesAll) {
-  const txFiltradas = _filtroTipo === 'Todos'
-    ? txMesAll
-    : txMesAll.filter(t => t.tipo === _filtroTipo);
+  const txFiltradas = filtrarTx(txMesAll);
 
   const sorted = [...txFiltradas].sort((a, b) => b.fecha.localeCompare(a.fecha));
 
