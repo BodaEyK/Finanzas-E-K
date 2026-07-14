@@ -391,6 +391,8 @@ function buildCategoriaChart(transacciones, mesActual, anioActual, categoria) {
     },
     options: {
       responsive: true,
+      // Permite clicar la columna aunque el mes esté en cero (sin barra visible)
+      interaction: { mode: 'index', intersect: false },
       onHover: (evt, els) => {
         evt.native.target.style.cursor = els.length ? 'pointer' : 'default';
       },
@@ -474,13 +476,20 @@ function buildBarChart(transacciones, mesActual, anioActual) {
     },
     options: {
       responsive: true,
+      // 'index' + intersect:false → se puede clicar/hover en cualquier parte
+      // de la columna del mes, aunque ese mes no tenga barras (esté vacío)
+      interaction: { mode: 'index', intersect: false },
       onHover: (evt, els) => {
         evt.native.target.style.cursor = els.length ? 'pointer' : 'default';
       },
-      // Clic en una barra → el dashboard salta a ese mes
+      // Clic en una columna → el dashboard salta a ese mes
       onClick: (evt, els) => {
         if (!els.length) return;
         const m = meses[els[0].index];
+        if (m.mes === AppState.mes && m.anio === AppState.anio) {
+          showToast(`Ya estás viendo ${getMesNombre(m.mes)} ${m.anio}`, 'info');
+          return;
+        }
         AppState.mes  = m.mes;
         AppState.anio = m.anio;
         document.getElementById('selectMes').value = String(m.mes);
@@ -488,6 +497,7 @@ function buildBarChart(transacciones, mesActual, anioActual) {
         _ensureYearOption(selAnio, m.anio);
         selAnio.value = String(m.anio);
         renderDashboard();
+        showToast(`Mostrando ${getMesNombre(m.mes)} ${m.anio}`, 'success');
       },
       plugins: {
         legend: {
