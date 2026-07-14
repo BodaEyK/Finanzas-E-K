@@ -53,7 +53,8 @@ function renderRegistro() {
           <div class="form-group" style="flex:2;min-width:200px">
             <label class="form-label" for="txDescripcion">Descripción</label>
             <input type="text" id="txDescripcion" class="form-control"
-              placeholder="Ej: Supermercado Metro" required />
+              list="descSugerencias" autocomplete="off"
+              placeholder="Ej: Mototaxi (se autocompleta)" required />
           </div>
           <div class="form-group">
             <label class="form-label" for="txTipo">Tipo</label>
@@ -123,6 +124,23 @@ function renderRegistro() {
   document.getElementById('txTipo').addEventListener('change', e => {
     const catSelect = document.getElementById('txCategoria');
     catSelect.innerHTML = buildCategoryOptions(e.target.value, '');
+  });
+
+  // Autocompletado: al escribir/elegir una descripción ya usada, rellena
+  // tipo y categoría (y el monto solo si está vacío, para no pisar lo tuyo)
+  document.getElementById('txDescripcion').addEventListener('input', e => {
+    const val   = e.target.value.trim().toLowerCase();
+    if (!val) return;
+    const match = sugerenciasDescripcion(AppState.transacciones)
+      .find(s => s.descripcion.toLowerCase() === val);
+    if (!match) return;
+
+    document.getElementById('txTipo').value = match.tipo;
+    document.getElementById('txCategoria').innerHTML =
+      buildCategoryOptions(match.tipo, match.categoria);
+
+    const inpMonto = document.getElementById('txMonto');
+    if (!inpMonto.value) inpMonto.value = match.monto;
   });
 
   // Filtros
@@ -258,7 +276,8 @@ function openEditModal(id) {
         </div>
         <div class="form-group" style="flex:2">
           <label class="form-label">Descripción</label>
-          <input type="text" id="editDesc" class="form-control" value="${escapeHtml(tx.descripcion)}" required />
+          <input type="text" id="editDesc" class="form-control" list="descSugerencias"
+            autocomplete="off" value="${escapeHtml(tx.descripcion)}" required />
         </div>
         <div class="form-group">
           <label class="form-label">Tipo</label>

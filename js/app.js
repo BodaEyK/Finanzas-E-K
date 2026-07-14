@@ -269,6 +269,62 @@ async function loadData() {
 
   AppState.loading = false;
   updateOfflineBanner();
+  updateDatalistDescripciones();
+}
+
+/* ============================================================
+   SUGERENCIAS DE DESCRIPCIÓN (autocompletado)
+   Junta las descripciones ya usadas y recuerda, de cada una, la categoría,
+   tipo y monto de la ÚLTIMA vez que se registró. Ordena por más usadas.
+   ============================================================ */
+function sugerenciasDescripcion(transacciones) {
+  const mapa = new Map();
+
+  (transacciones || []).forEach(t => {
+    const desc = String(t.descripcion || '').trim();
+    if (!desc) return;
+    const key  = desc.toLowerCase();
+    const prev = mapa.get(key);
+
+    if (!prev) {
+      mapa.set(key, {
+        descripcion: desc,
+        tipo:        t.tipo,
+        categoria:   t.categoria,
+        monto:       Number(t.monto),
+        fecha:       t.fecha,
+        veces:       1,
+      });
+    } else {
+      prev.veces++;
+      // Nos quedamos con los datos de la vez MÁS RECIENTE
+      if (String(t.fecha) > String(prev.fecha)) {
+        prev.descripcion = desc;
+        prev.tipo        = t.tipo;
+        prev.categoria   = t.categoria;
+        prev.monto       = Number(t.monto);
+        prev.fecha       = t.fecha;
+      }
+    }
+  });
+
+  // Más repetidas primero; a igual uso, la más reciente
+  return [...mapa.values()].sort(
+    (a, b) => b.veces - a.veces || String(b.fecha).localeCompare(String(a.fecha))
+  );
+}
+
+/* Datalist global: lo usan tanto el form de alta como el modal de edición */
+function updateDatalistDescripciones() {
+  let dl = document.getElementById('descSugerencias');
+  if (!dl) {
+    dl = document.createElement('datalist');
+    dl.id = 'descSugerencias';
+    document.body.appendChild(dl);
+  }
+  dl.innerHTML = sugerenciasDescripcion(AppState.transacciones)
+    .map(s => `<option value="${escapeHtml(s.descripcion)}">${escapeHtml(s.categoria)} · ${formatMoney(s.monto)}</option>`)
+    .join('');
 }
 
 /* Aviso visible arriba cuando estamos trabajando sin conexión */
