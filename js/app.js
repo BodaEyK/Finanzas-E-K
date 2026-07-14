@@ -58,15 +58,39 @@ function periodoStr(mes, anio) {
   return `${anio}-${String(mes).padStart(2, '0')}`;
 }
 
+/* ── AHORRO vs GASTO ──────────────────────────────────────────
+   "Ahorro/Inversión" NO es un gasto: es un traspaso. El dinero no se fue,
+   solo cambió de bolsillo. Por eso no reduce tu patrimonio ni tu tasa de
+   ahorro. (Sí se sigue midiendo como meta en la pantalla Presupuesto.) */
+const CATEGORIA_AHORRO = 'Ahorro/Inversión';
+
+function esAhorro(t) {
+  return t.tipo === 'Gasto' && t.categoria === CATEGORIA_AHORRO;
+}
+
+/* Gastos de consumo: lo que realmente salió de tu bolsillo (sin traspasos) */
+function gastosDeConsumo(txs) {
+  return (txs || [])
+    .filter(t => t.tipo === 'Gasto' && !esAhorro(t))
+    .reduce((s, t) => s + Number(t.monto), 0);
+}
+
+/* Lo que moviste explícitamente a Ahorro/Inversión */
+function ahorroExplicito(txs) {
+  return (txs || []).filter(esAhorro).reduce((s, t) => s + Number(t.monto), 0);
+}
+
 /* Saldo que viene arrastrado de TODOS los meses anteriores al indicado.
    Se calcula sobre la marcha (no se guarda), así siempre cuadra aunque
-   se editen transacciones del pasado. */
+   se editen transacciones del pasado. Los traspasos a ahorro no lo reducen. */
 function saldoAnterior(transacciones, mes, anio) {
   const periodo = periodoStr(mes, anio);
   return (transacciones || []).reduce((acc, t) => {
     const p = String(t.fecha).slice(0, 7); // 'yyyy-MM'
-    if (p >= periodo) return acc;          // solo meses previos
-    return acc + (t.tipo === 'Ingreso' ? Number(t.monto) : -Number(t.monto));
+    if (p >= periodo)        return acc;               // solo meses previos
+    if (t.tipo === 'Ingreso') return acc + Number(t.monto);
+    if (esAhorro(t))          return acc;              // traspaso: sigue siendo tuyo
+    return acc - Number(t.monto);
   }, 0);
 }
 

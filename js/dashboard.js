@@ -17,14 +17,18 @@ function renderDashboard() {
     .filter(t => t.tipo === 'Ingreso')
     .reduce((s, t) => s + Number(t.monto), 0);
 
-  const totalGastos = txMes
-    .filter(t => t.tipo === 'Gasto')
-    .reduce((s, t) => s + Number(t.monto), 0);
+  // Gastos = solo consumo real. Los traspasos a Ahorro/Inversión no cuentan
+  // como gasto (el dinero no se fue, sigue siendo tuyo).
+  const totalGastos = gastosDeConsumo(txMes);
+  const ahorroMes   = ahorroExplicito(txMes);
 
   const balance = totalIngresos - totalGastos;
   const tasaAhorro = totalIngresos > 0
     ? ((balance / totalIngresos) * 100).toFixed(1)
     : '0.0';
+  const subTasa = ahorroMes > 0
+    ? `Incluye ${formatMoney(ahorroMes)} en Ahorro/Inversión`
+    : 'Del total de ingresos';
 
   // Saldo arrastrado desde los meses anteriores + el balance de este mes
   const saldoAnt   = saldoAnterior(transacciones, mes, anio);
@@ -41,7 +45,7 @@ function renderDashboard() {
       ${kpiCard('Gastos del Mes',   formatMoney(totalGastos),  'kpi-expense', getMesNombre(mes) + ' ' + anio, '↓')}
       ${kpiCard('Balance del Mes',  formatMoney(balance),      'kpi-balance', balance >= 0 ? 'Positivo' : 'Negativo', balance >= 0 ? '✓' : '!')}
       ${kpiCard('Saldo Acumulado',  formatMoney(saldoFinal),   claseSaldo,    subSaldo, '🏦')}
-      ${kpiCard('Tasa de Ahorro',   tasaAhorro + '%',          'kpi-savings', 'Del total de ingresos', '🎯')}
+      ${kpiCard('Tasa de Ahorro',   tasaAhorro + '%',          'kpi-savings', subTasa, '🎯')}
     </div>
 
     <!-- Gráficos -->
@@ -168,8 +172,9 @@ function buildDonutChart(txMes) {
   const canvas = document.getElementById('chartDonut');
   if (!canvas) return;
 
+  // Solo consumo real: los traspasos a Ahorro/Inversión no son gasto
   const gastosPorCat = {};
-  txMes.filter(t => t.tipo === 'Gasto').forEach(t => {
+  txMes.filter(t => t.tipo === 'Gasto' && !esAhorro(t)).forEach(t => {
     gastosPorCat[t.categoria] = (gastosPorCat[t.categoria] || 0) + Number(t.monto);
   });
 
@@ -244,9 +249,7 @@ function buildBarChart(transacciones, mesActual, anioActual) {
   );
 
   const gastos = meses.map(({ mes, anio }) =>
-    transaccionesDelMes(transacciones, mes, anio)
-      .filter(t => t.tipo === 'Gasto')
-      .reduce((s, t) => s + Number(t.monto), 0)
+    gastosDeConsumo(transaccionesDelMes(transacciones, mes, anio))
   );
 
   if (_chartBarras) { _chartBarras.destroy(); _chartBarras = null; }
