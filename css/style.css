@@ -748,6 +748,34 @@ tbody td {
   font-size: 16px;
   font-weight: 700;
 }
+/* Modal de detalle por categoría */
+.detalle-scroll {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+.detalle-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--color-surface2);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.detalle-total strong { font-size: 16px; color: var(--color-text); }
+
+/* Pista de que la gráfica es clicable */
+.chart-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-muted2);
+  margin-left: auto;
+}
+
 .cat-hist-resumen {
   margin-top: 14px;
   padding-top: 12px;

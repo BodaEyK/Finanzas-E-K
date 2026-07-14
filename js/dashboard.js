@@ -64,13 +64,19 @@ function renderDashboard() {
     <!-- Gráficos -->
     <div class="charts-grid">
       <div class="chart-card">
-        <div class="chart-card-title">📊 Gastos por Categoría</div>
+        <div class="chart-card-title">
+          📊 Gastos por Categoría
+          <span class="chart-hint">clic → ver detalle</span>
+        </div>
         <div class="chart-wrapper donut">
           <canvas id="chartDonut"></canvas>
         </div>
       </div>
       <div class="chart-card">
-        <div class="chart-card-title">📈 Ingresos vs Gastos — Últimos 6 meses</div>
+        <div class="chart-card-title">
+          📈 Ingresos vs Gastos — Últimos 6 meses
+          <span class="chart-hint">clic → ir al mes</span>
+        </div>
         <div class="chart-wrapper">
           <canvas id="chartBarras" style="max-height:220px"></canvas>
         </div>
@@ -80,7 +86,10 @@ function renderDashboard() {
     <!-- Histórico de una categoría -->
     <div class="card">
       <div class="card-header">
-        <span class="card-title">🔎 Evolución por Categoría — últimos 6 meses</span>
+        <span class="card-title">
+          🔎 Evolución por Categoría — últimos 6 meses
+          <span style="font-size:11px;font-weight:400;color:var(--color-muted2)">· clic en una barra</span>
+        </span>
         <select id="selectCatHist" class="period-select">
           ${CATEGORIAS_GASTO.map(c =>
             `<option value="${escapeHtml(c)}" ${c === catSel ? 'selected' : ''}>${escapeHtml(c)}</option>`
@@ -114,6 +123,71 @@ function renderDashboard() {
       _catHistorica = e.target.value;
       buildCategoriaChart(transacciones, mes, anio, _catHistorica);
     });
+  });
+}
+
+/* ---- Modal de detalle: transacciones de UNA categoría en UN mes ---- */
+function openCategoriaDetalle(categoria, mes, anio) {
+  const txs = transaccionesDelMes(AppState.transacciones, mes, anio)
+    .filter(t => t.categoria === categoria)
+    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+
+  const total = txs.reduce((s, t) => s + Number(t.monto), 0);
+
+  let body;
+  if (txs.length === 0) {
+    body = `<div class="empty-state">
+      <div class="empty-state-icon">📭</div>
+      <div class="empty-state-msg">Sin movimientos de ${escapeHtml(categoria)} en ${getMesNombre(mes)} ${anio}</div>
+    </div>`;
+  } else {
+    const filas = txs.map(t => `
+      <tr>
+        <td style="white-space:nowrap">${formatDate(t.fecha)}</td>
+        <td>
+          ${escapeHtml(t.descripcion)}
+          ${t.notas ? `<div style="font-size:11px;color:var(--color-muted2);margin-top:2px">📝 ${escapeHtml(t.notas)}</div>` : ''}
+        </td>
+        <td class="${t.tipo === 'Ingreso' ? 'amount-income' : 'amount-expense'}" style="white-space:nowrap;text-align:right">
+          ${formatMoney(t.monto)}
+        </td>
+      </tr>`).join('');
+
+    body = `
+      <div class="detalle-scroll">
+        <table>
+          <thead><tr><th>Fecha</th><th>Descripción</th><th style="text-align:right">Monto</th></tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>
+      <div class="detalle-total">
+        <span>${txs.length} movimiento${txs.length !== 1 ? 's' : ''}</span>
+        <strong>${formatMoney(total)}</strong>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+        <button type="button" class="btn btn-ghost" id="btnCerrarDetalle">Cerrar</button>
+        <button type="button" class="btn btn-primary" id="btnVerEnRegistro">📋 Ver en Transacciones</button>
+      </div>`;
+  }
+
+  openModal(`${categoria} — ${getMesNombre(mes)} ${anio}`, body);
+
+  document.getElementById('btnCerrarDetalle')?.addEventListener('click', closeModal);
+
+  // Salta a Transacciones con el filtro de esa categoría (y ese mes) ya puesto
+  document.getElementById('btnVerEnRegistro')?.addEventListener('click', () => {
+    AppState.mes  = mes;
+    AppState.anio = anio;
+    document.getElementById('selectMes').value = String(mes);
+    const selAnio = document.getElementById('selectAnio');
+    _ensureYearOption(selAnio, anio);
+    selAnio.value = String(anio);
+
+    _filtroTipo      = 'Todos';
+    _filtroCategoria = categoria;
+
+    closeModal();
+    navigateTo('registro');
   });
 }
 
@@ -244,6 +318,13 @@ function buildDonutChart(txMes) {
     options: {
       responsive: true,
       cutout: '68%',
+      onHover: (evt, els) => {
+        evt.native.target.style.cursor = els.length ? 'pointer' : 'default';
+      },
+      onClick: (evt, els) => {
+        if (!els.length) return;
+        openCategoriaDetalle(labels[els[0].index], AppState.mes, AppState.anio);
+      },
       plugins: {
         legend: {
           position: 'bottom',
@@ -310,6 +391,14 @@ function buildCategoriaChart(transacciones, mesActual, anioActual, categoria) {
     },
     options: {
       responsive: true,
+      onHover: (evt, els) => {
+        evt.native.target.style.cursor = els.length ? 'pointer' : 'default';
+      },
+      onClick: (evt, els) => {
+        if (!els.length) return;
+        const m = meses[els[0].index];
+        openCategoriaDetalle(categoria, m.mes, m.anio);
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -385,6 +474,21 @@ function buildBarChart(transacciones, mesActual, anioActual) {
     },
     options: {
       responsive: true,
+      onHover: (evt, els) => {
+        evt.native.target.style.cursor = els.length ? 'pointer' : 'default';
+      },
+      // Clic en una barra → el dashboard salta a ese mes
+      onClick: (evt, els) => {
+        if (!els.length) return;
+        const m = meses[els[0].index];
+        AppState.mes  = m.mes;
+        AppState.anio = m.anio;
+        document.getElementById('selectMes').value = String(m.mes);
+        const selAnio = document.getElementById('selectAnio');
+        _ensureYearOption(selAnio, m.anio);
+        selAnio.value = String(m.anio);
+        renderDashboard();
+      },
       plugins: {
         legend: {
           labels: {
