@@ -79,17 +79,18 @@ function _hojaTransacciones(txs) {
       'Tipo':        t.tipo,
       'Monto':       r2(t.monto),
       'Notas':       t.notas || '',
+      'Evento':      t.evento || '',
     }));
 
   const ws = XLSX.utils.json_to_sheet(rows, {
-    header: ['Fecha', 'Descripción', 'Categoría', 'Tipo', 'Monto', 'Notas']
+    header: ['Fecha', 'Descripción', 'Categoría', 'Tipo', 'Monto', 'Notas', 'Evento']
   });
-  ws['!cols'] = [{ wch: 12 }, { wch: 34 }, { wch: 20 }, { wch: 11 }, { wch: 14 }, { wch: 28 }];
-  ws['!autofilter'] = { ref: `A1:F${rows.length + 1}` };   // filtros nativos de Excel
+  ws['!cols'] = [{ wch: 12 }, { wch: 34 }, { wch: 20 }, { wch: 11 }, { wch: 14 }, { wch: 28 }, { wch: 22 }];
+  ws['!autofilter'] = { ref: `A1:G${rows.length + 1}` };   // filtros nativos de Excel
 
   const tipos = rows.map(r => r['Tipo']);
 
-  _estilizar(ws, 6, rows.length, (cell, R, C) => {
+  _estilizar(ws, 7, rows.length, (cell, R, C) => {
     if (C === 0 || C === 3) {                       // Fecha, Tipo → centrados
       cell.s.alignment = { horizontal: 'center', vertical: 'center' };
     }
@@ -102,6 +103,9 @@ function _hojaTransacciones(txs) {
     }
     if (C === 5) {                                  // Notas → gris
       cell.s.font = { sz: 10, italic: true, color: { rgb: '64748B' } };
+    }
+    if (C === 6) {                                  // Evento → cian, destacado
+      cell.s.font = { sz: 10, bold: true, color: { rgb: XL.cyan } };
     }
   });
 

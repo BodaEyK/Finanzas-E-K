@@ -749,6 +749,77 @@ tbody td {
   font-weight: 700;
 }
 /* ============================================================
+   EVENTOS
+   ============================================================ */
+.eventos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 16px;
+}
+.evento-card {
+  padding: 18px 20px;
+  margin-bottom: 0;
+  cursor: pointer;
+  transition: border-color var(--transition), transform var(--transition);
+}
+.evento-card:hover {
+  border-color: var(--color-cyan);
+  transform: translateY(-2px);
+}
+.evento-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+.evento-nombre {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.evento-meta {
+  font-size: 11px;
+  color: var(--color-muted);
+  margin-top: 3px;
+}
+.evento-total {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--color-cyan);
+  white-space: nowrap;
+}
+.evento-cats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.evento-cat-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-muted);
+  margin-bottom: 4px;
+}
+.evento-cat-pct { color: var(--color-muted2); font-size: 11px; }
+.evento-neto {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.evento-hint {
+  margin-top: 12px;
+  font-size: 10px;
+  text-align: right;
+  color: var(--color-muted2);
+}
+
+/* ============================================================
    EXPORTAR A EXCEL
    ============================================================ */
 /* Botón "⬇ Excel": texto y flecha en verde */

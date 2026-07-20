@@ -17,6 +17,7 @@ const AppState = {
   offline: false,   // true si estamos mostrando datos de la caché
   cacheTs: null,    // cuándo se guardó esa caché
   sugerencias: [],  // descripciones ya usadas (para el autocompletado)
+  eventos: [],      // eventos agrupados (viajes, ocasiones…)
 };
 
 /* ============================================================
@@ -160,12 +161,14 @@ function closeModal() {
 const sections = {
   dashboard:   document.getElementById('section-dashboard'),
   registro:    document.getElementById('section-registro'),
+  eventos:     document.getElementById('section-eventos'),
   presupuesto: document.getElementById('section-presupuesto'),
 };
 
 const headerTitles = {
   dashboard:   'Dashboard',
   registro:    'Transacciones',
+  eventos:     'Eventos',
   presupuesto: 'Presupuesto',
 };
 
@@ -197,6 +200,7 @@ function navigateTo(name) {
 function renderCurrentSection() {
   if (currentSection === 'dashboard')   renderDashboard();
   if (currentSection === 'registro')    renderRegistro();
+  if (currentSection === 'eventos')     renderEventos();
   if (currentSection === 'presupuesto') renderPresupuesto();
 }
 
@@ -270,6 +274,7 @@ async function loadData() {
 
   AppState.loading = false;
   AppState.sugerencias = sugerenciasDescripcion(AppState.transacciones);
+  AppState.eventos     = agruparEventos(AppState.transacciones);
   updateOfflineBanner();
 }
 
@@ -319,19 +324,77 @@ function sugerenciasDescripcion(transacciones) {
    Prioriza las que EMPIEZAN por el término, luego las que lo contienen.
    Devuelve pocas (máx. 8) para que la lista sea usable con miles de registros. */
 function buscarSugerencias(termino, limite = 8) {
+  return _filtrarPorTermino(AppState.sugerencias, 'descripcion', termino, limite);
+}
+
+/* Filtro genérico: prioriza lo que EMPIEZA por el término, luego lo que lo contiene */
+function _filtrarPorTermino(lista, campo, termino, limite = 8) {
   const term = String(termino || '').trim().toLowerCase();
   if (term.length < 2) return [];   // no molestar hasta la 2ª letra
 
   const empieza  = [];
   const contiene = [];
 
-  for (const s of (AppState.sugerencias || [])) {
-    const d = s.descripcion.toLowerCase();
+  for (const s of (lista || [])) {
+    const d = String(s[campo] || '').toLowerCase();
     if (d.startsWith(term))      empieza.push(s);
     else if (d.includes(term))   contiene.push(s);
     if (empieza.length >= limite) break;
   }
   return [...empieza, ...contiene].slice(0, limite);
+}
+
+/* ============================================================
+   EVENTOS — etiqueta transversal a las categorías
+   Un evento ("Viaje a Lima", "Baby shower") agrupa gastos de VARIAS
+   categorías y de cualquier mes. Es opcional y no afecta al presupuesto,
+   al saldo acumulado ni a ningún otro cálculo: es una capa encima.
+   Se agrupa sin distinguir mayúsculas para tolerar "Viaje a Lima" vs
+   "viaje a lima"; se muestra la forma escrita más recientemente.
+   ============================================================ */
+function agruparEventos(transacciones) {
+  const mapa = new Map();
+
+  (transacciones || []).forEach(t => {
+    const nombre = String(t.evento || '').trim();
+    if (!nombre) return;                       // sin evento: no entra
+    const key = nombre.toLowerCase();
+
+    if (!mapa.has(key)) {
+      mapa.set(key, {
+        evento: nombre,
+        gastos: 0, ingresos: 0, nGastos: 0,
+        desde: t.fecha, hasta: t.fecha,
+        ultimaEscritura: t.fecha,
+        porCategoria: {},
+      });
+    }
+    const e = mapa.get(key);
+
+    if (t.tipo === 'Ingreso') {
+      e.ingresos += Number(t.monto);
+    } else {
+      e.gastos   += Number(t.monto);
+      e.nGastos++;
+      e.porCategoria[t.categoria] = (e.porCategoria[t.categoria] || 0) + Number(t.monto);
+    }
+
+    if (String(t.fecha) < String(e.desde)) e.desde = t.fecha;
+    if (String(t.fecha) > String(e.hasta)) e.hasta = t.fecha;
+    // El nombre "oficial" es el de la transacción más reciente
+    if (String(t.fecha) >= String(e.ultimaEscritura)) {
+      e.ultimaEscritura = t.fecha;
+      e.evento = nombre;
+    }
+  });
+
+  // Más recientes primero
+  return [...mapa.values()].sort((a, b) => String(b.hasta).localeCompare(String(a.hasta)));
+}
+
+/* Sugerencias de evento para el autocompletado */
+function buscarEventos(termino, limite = 8) {
+  return _filtrarPorTermino(AppState.eventos, 'evento', termino, limite);
 }
 
 /* Aviso visible arriba cuando estamos trabajando sin conexión */

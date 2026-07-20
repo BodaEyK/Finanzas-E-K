@@ -2,7 +2,7 @@
  * FINANZAS E&K — Google Apps Script Backend
  * Hoja de cálculo: 2 hojas → "Transacciones" y "Presupuesto"
  *
- * Columnas Transacciones: ID | Fecha | Descripcion | Categoria | Tipo | Monto | Notas
+ * Columnas Transacciones: ID | Fecha | Descripcion | Categoria | Tipo | Monto | Notas | Evento
  * Columnas Presupuesto:   Categoria | Presupuesto
  */
 
@@ -127,7 +127,7 @@ function _parseSheetDate(cell) {
 function getTransacciones() {
   const sheet  = getSheet(SHEET_TX);
   const data   = sheet.getDataRange().getValues();
-  const headers = data[0]; // ID, Fecha, Descripcion, Categoria, Tipo, Monto, Notas
+  const headers = data[0]; // ID, Fecha, Descripcion, Categoria, Tipo, Monto, Notas, Evento
 
   const transacciones = data.slice(1).map(row => ({
     id:          String(row[0]),
@@ -137,6 +137,7 @@ function getTransacciones() {
     tipo:        String(row[4]),
     monto:       Number(row[5]),
     notas:       String(row[6] || ''),
+    evento:      String(row[7] || ''),   // etiqueta transversal (viaje, mudanza…)
   })).filter(t => t.id && t.id !== 'undefined');
 
   return { transacciones };
@@ -152,7 +153,8 @@ function addTransaccion(data) {
     data.categoria,
     data.tipo,
     data.monto,
-    data.notas || ''
+    data.notas  || '',
+    data.evento || ''
   ]);
   return { success: true, id };
 }
@@ -163,14 +165,15 @@ function updateTransaccion(data) {
 
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][0]) === String(data.id)) {
-      sheet.getRange(i + 1, 1, 1, 7).setValues([[
+      sheet.getRange(i + 1, 1, 1, 8).setValues([[
         data.id,
         data.fecha,
         data.descripcion,
         data.categoria,
         data.tipo,
         data.monto,
-        data.notas || ''
+        data.notas  || '',
+        data.evento || ''
       ]]);
       return { success: true };
     }
@@ -245,7 +248,7 @@ function setupSheets() {
   // Hoja Transacciones
   let sheetTx = ss.getSheetByName(SHEET_TX);
   if (!sheetTx) sheetTx = ss.insertSheet(SHEET_TX);
-  sheetTx.getRange(1, 1, 1, 7).setValues([['ID','Fecha','Descripcion','Categoria','Tipo','Monto','Notas']]);
+  sheetTx.getRange(1, 1, 1, 8).setValues([['ID','Fecha','Descripcion','Categoria','Tipo','Monto','Notas','Evento']]);
 
   // Hoja Presupuesto — con columna Mes (yyyy-MM)
   let sheetBudget = ss.getSheetByName(SHEET_BUDGET);
@@ -265,6 +268,22 @@ function setupSheets() {
    Estampa tu presupuesto actual en el mes en curso; de ahí en adelante
    cada mes hereda del anterior hasta que lo edites.
    ============================================================ */
+/* Añade la columna "Evento" (H) a la hoja Transacciones.
+   Es SEGURA: solo escribe el encabezado si falta; no toca ninguna fila
+   de datos y se puede ejecutar varias veces sin problema. */
+function migrateEventos() {
+  const sheet   = getSheet(SHEET_TX);
+  const cabecera = String(sheet.getRange(1, 8).getValue() || '').trim();
+
+  if (cabecera.toLowerCase() === 'evento') {
+    Logger.log('Ya migrado: la columna Evento ya existe.');
+    return;
+  }
+
+  sheet.getRange(1, 8).setValue('Evento');
+  Logger.log('Columna "Evento" agregada. Las transacciones existentes quedan sin evento (normal).');
+}
+
 function migratePresupuesto() {
   const sheet  = getSheet(SHEET_BUDGET);
   const data   = sheet.getDataRange().getValues();

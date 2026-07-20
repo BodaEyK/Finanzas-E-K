@@ -4,6 +4,7 @@
 
 let _filtroTipo = 'Todos';
 let _filtroCategoria = 'Todas';
+let _ultimoEvento = '';   // se mantiene entre altas seguidas (útil durante un viaje)
 let _formCollapsed = window.innerWidth < 640;
 
 /* ============================================================
@@ -12,7 +13,22 @@ let _formCollapsed = window.innerWidth < 640;
    2+ letras, muestra máx. 8 coincidencias y respeta el tema oscuro.
    Escala bien aunque haya miles de descripciones distintas.
    ============================================================ */
-function attachAutocomplete(input, { autoFill = false } = {}) {
+function attachAutocomplete(input, { autoFill = false, fuente = 'descripcion' } = {}) {
+  // Cada fuente define cómo buscar y cómo pintar cada resultado
+  const FUENTES = {
+    descripcion: {
+      buscar: t => buscarSugerencias(t),
+      texto:  s => s.descripcion,
+      meta:   s => `${s.categoria} · ${formatMoney(s.monto)}${s.veces > 1 ? ` · ${s.veces}×` : ''}`,
+    },
+    evento: {
+      buscar: t => buscarEventos(t),
+      texto:  s => s.evento,
+      meta:   s => `${s.nGastos} gasto${s.nGastos !== 1 ? 's' : ''} · ${formatMoney(s.gastos)}`,
+    },
+  };
+  const F = FUENTES[fuente] || FUENTES.descripcion;
+
   if (!input) return;
 
   // Envolver el input para poder posicionar la lista debajo
@@ -34,21 +50,21 @@ function attachAutocomplete(input, { autoFill = false } = {}) {
     if (!items.length) { cerrar(); return; }
     list.innerHTML = items.map((s, i) => `
       <div class="ac-item ${i === activo ? 'active' : ''}" data-i="${i}">
-        <span class="ac-desc">${escapeHtml(s.descripcion)}</span>
-        <span class="ac-meta">${escapeHtml(s.categoria)} · ${formatMoney(s.monto)}${s.veces > 1 ? ` · ${s.veces}×` : ''}</span>
+        <span class="ac-desc">${escapeHtml(F.texto(s))}</span>
+        <span class="ac-meta">${escapeHtml(F.meta(s))}</span>
       </div>`).join('');
     list.classList.remove('hidden');
   };
 
   const elegir = (s) => {
     if (!s) return;
-    input.value = s.descripcion;
+    input.value = F.texto(s);
     cerrar();
     if (autoFill) aplicarSugerencia(s);
   };
 
   input.addEventListener('input', () => {
-    items  = buscarSugerencias(input.value);
+    items  = F.buscar(input.value);
     activo = -1;
     pintar();
   });
@@ -161,6 +177,12 @@ function renderRegistro() {
             <label class="form-label" for="txNotas">Notas</label>
             <input type="text" id="txNotas" class="form-control" placeholder="Opcional" />
           </div>
+          <div class="form-group" style="min-width:170px">
+            <label class="form-label" for="txEvento">🏷️ Evento</label>
+            <input type="text" id="txEvento" class="form-control" autocomplete="off"
+              value="${escapeHtml(_ultimoEvento)}"
+              placeholder="Opcional — ej: Viaje a Lima" />
+          </div>
           <div class="form-group" style="align-self:flex-end">
             <button type="submit" class="btn btn-primary" id="btnGuardarTx">
               💾 Guardar
@@ -213,6 +235,8 @@ function renderRegistro() {
 
   // Autocompletado propio en la descripción (con autorelleno de tipo/cat/monto)
   attachAutocomplete(document.getElementById('txDescripcion'), { autoFill: true });
+  // …y en el evento (para no escribirlo distinto cada vez)
+  attachAutocomplete(document.getElementById('txEvento'), { fuente: 'evento' });
 
   // Filtros
   container.querySelectorAll('.filter-btn').forEach(btn => {
@@ -320,6 +344,7 @@ async function handleAddTx(e) {
     categoria:   document.getElementById('txCategoria').value,
     monto:       parseFloat(document.getElementById('txMonto').value),
     notas:       document.getElementById('txNotas').value.trim(),
+    evento:      document.getElementById('txEvento').value.trim(),
   };
 
   try {
@@ -328,6 +353,8 @@ async function handleAddTx(e) {
     showToast('Transacción guardada correctamente', 'success');
     document.getElementById('formNuevaTx').reset();
     document.getElementById('txFecha').value = localDateString();
+    // El evento se conserva: durante un viaje se registran varios gastos seguidos
+    _ultimoEvento = tx.evento;
     renderRegistro();
   } catch (err) {
     showToast('Error al guardar: ' + err.message, 'error');
@@ -374,6 +401,11 @@ function openEditModal(id) {
           <label class="form-label">Notas</label>
           <input type="text" id="editNotas" class="form-control" value="${escapeHtml(tx.notas || '')}" />
         </div>
+        <div class="form-group" style="flex:2">
+          <label class="form-label">🏷️ Evento</label>
+          <input type="text" id="editEvento" class="form-control" autocomplete="off"
+            value="${escapeHtml(tx.evento || '')}" placeholder="Opcional" />
+        </div>
       </div>
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px">
         <button type="button" class="btn btn-ghost" id="modalCancelBtn">Cancelar</button>
@@ -385,6 +417,7 @@ function openEditModal(id) {
 
   // Sugerencias también al editar (sin autorellenar: aquí estás corrigiendo algo puntual)
   attachAutocomplete(document.getElementById('editDesc'));
+  attachAutocomplete(document.getElementById('editEvento'), { fuente: 'evento' });
 
   document.getElementById('editTipo').addEventListener('change', e => {
     document.getElementById('editCategoria').innerHTML = buildCategoryOptions(e.target.value, '');
@@ -406,6 +439,7 @@ function openEditModal(id) {
         categoria:   document.getElementById('editCategoria').value,
         monto:       parseFloat(document.getElementById('editMonto').value),
         notas:       document.getElementById('editNotas').value.trim(),
+        evento:      document.getElementById('editEvento').value.trim(),
       });
       await loadData();
       showToast('Transacción actualizada', 'success');
