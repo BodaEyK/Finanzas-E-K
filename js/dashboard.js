@@ -357,9 +357,10 @@ function buildDonutChart(txMes) {
 
   const labels  = top.map(e => e[0]);
   const data    = top.map(e => e[1]);
-  // Color por categoría si está fijado; si no, el siguiente de la paleta por orden
-  let _pi = 0;
-  const colores = top.map(([cat]) => CHART_CATEGORIA_COLOR[cat] || CHART_PALETTE[_pi++]);
+  // Cada posición mantiene SU color de la paleta; solo las categorías con
+  // color fijo (CHART_CATEGORIA_COLOR) lo sobreescriben. Así cambiar una
+  // categoría NO corre los colores de las demás.
+  const colores = top.map(([cat], i) => CHART_CATEGORIA_COLOR[cat] || CHART_PALETTE[i]);
 
   if (ocultas.length > 0) {
     labels.push(OTRAS_LABEL);
