@@ -368,7 +368,9 @@ select option { background: var(--color-surface); }
 .chart-wrapper {
   position: relative;
 }
-.chart-wrapper.donut { max-width: 220px; margin: 0 auto; }
+/* Más ancho que antes: la leyenda ahora lleva el monto y el % de cada
+   categoría (codificación secundaria), y necesita espacio para no romperse */
+.chart-wrapper.donut { max-width: 340px; margin: 0 auto; }
 
 /* ============================================================
    TABLES

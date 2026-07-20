@@ -2,6 +2,19 @@
    FINANZAS E&K — DASHBOARD.JS
    ============================================================ */
 
+/* ============================================================
+   PALETA CATEGÓRICA
+   7 tonos + gris para "Otras". Verificada con el validador de la guía de
+   dataviz sobre el fondo #1E293B: pasa banda de luminosidad, croma,
+   separación para daltonismo y piso de visión normal (ΔE ≥ 15).
+   Más de 7 tonos NO es perceptualmente separable — por eso el resto se
+   agrupa en "Otras" en vez de inventar colores que se confunden.
+   ============================================================ */
+const CHART_PALETTE = ['#df6862', '#9b5b00', '#77a32f', '#00866e', '#00a0dc', '#615cbf', '#c76cb8'];
+const CHART_OTRAS   = '#94A3B8';   // gris: siempre significa "el resto"
+const MAX_SLICES    = 7;
+const OTRAS_LABEL   = 'Otras categorías';
+
 let _chartDonut     = null;
 let _chartBarras    = null;
 let _chartCategoria = null;
@@ -191,6 +204,42 @@ function openCategoriaDetalle(categoria, mes, anio) {
   });
 }
 
+/* ---- Modal: qué hay dentro de "Otras categorías" ---- */
+function openOtrasDetalle(ocultas, mes, anio) {
+  const total = ocultas.reduce((s, e) => s + e[1], 0);
+
+  const filas = ocultas.map(([cat, monto]) => `
+    <tr class="otras-row" data-cat="${escapeHtml(cat)}" style="cursor:pointer">
+      <td>${escapeHtml(cat)}</td>
+      <td class="amount-expense" style="text-align:right;white-space:nowrap">${formatMoney(monto)}</td>
+    </tr>`).join('');
+
+  const body = `
+    <p style="font-size:12px;color:var(--color-muted);margin-bottom:12px">
+      Categorías agrupadas por ser las de menor gasto. Haz clic en una para ver su detalle.
+    </p>
+    <div class="detalle-scroll">
+      <table>
+        <thead><tr><th>Categoría</th><th style="text-align:right">Gastado</th></tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </div>
+    <div class="detalle-total">
+      <span>${ocultas.length} categoría${ocultas.length !== 1 ? 's' : ''}</span>
+      <strong>${formatMoney(total)}</strong>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:16px">
+      <button type="button" class="btn btn-ghost" id="btnCerrarOtras">Cerrar</button>
+    </div>`;
+
+  openModal(`${OTRAS_LABEL} — ${getMesNombre(mes)} ${anio}`, body);
+
+  document.getElementById('btnCerrarOtras')?.addEventListener('click', closeModal);
+  document.querySelectorAll('.otras-row').forEach(tr => {
+    tr.addEventListener('click', () => openCategoriaDetalle(tr.dataset.cat, mes, anio));
+  });
+}
+
 /* ---- KPI Card HTML ---- */
 function kpiCard(label, value, cssClass, sub, icon) {
   return `
@@ -287,19 +336,27 @@ function buildDonutChart(txMes) {
     gastosPorCat[t.categoria] = (gastosPorCat[t.categoria] || 0) + Number(t.monto);
   });
 
-  const labels = Object.keys(gastosPorCat);
-  const data   = Object.values(gastosPorCat);
+  const entradas = Object.entries(gastosPorCat).sort((a, b) => b[1] - a[1]);
 
-  if (labels.length === 0) {
+  if (entradas.length === 0) {
     canvas.parentElement.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-msg">Sin gastos este mes</div></div>';
     return;
   }
 
-  const palette = [
-    '#2563EB','#16A34A','#DC2626','#D97706','#7C3AED',
-    '#0891B2','#BE185D','#65A30D','#EA580C','#0F766E',
-    '#1D4ED8','#15803D','#B91C1C','#B45309','#6D28D9'
-  ];
+  // Más de 7 categorías: se muestran las 7 mayores y el resto se agrupa,
+  // porque más de 7 colores ya no se distinguen con fiabilidad.
+  const top     = entradas.slice(0, MAX_SLICES);
+  const ocultas = entradas.slice(MAX_SLICES);
+
+  const labels  = top.map(e => e[0]);
+  const data    = top.map(e => e[1]);
+  const colores = top.map((_, i) => CHART_PALETTE[i]);
+
+  if (ocultas.length > 0) {
+    labels.push(OTRAS_LABEL);
+    data.push(ocultas.reduce((s, e) => s + e[1], 0));
+    colores.push(CHART_OTRAS);
+  }
 
   if (_chartDonut) { _chartDonut.destroy(); _chartDonut = null; }
 
@@ -309,8 +366,8 @@ function buildDonutChart(txMes) {
       labels,
       datasets: [{
         data,
-        backgroundColor: palette.slice(0, labels.length),
-        borderColor: '#1E293B',
+        backgroundColor: colores,
+        borderColor: '#1E293B',   // separación de 2px entre porciones
         borderWidth: 2,
         hoverOffset: 6,
       }]
@@ -323,7 +380,9 @@ function buildDonutChart(txMes) {
       },
       onClick: (evt, els) => {
         if (!els.length) return;
-        openCategoriaDetalle(labels[els[0].index], AppState.mes, AppState.anio);
+        const etiqueta = labels[els[0].index];
+        if (etiqueta === OTRAS_LABEL) openOtrasDetalle(ocultas, AppState.mes, AppState.anio);
+        else                          openCategoriaDetalle(etiqueta, AppState.mes, AppState.anio);
       },
       plugins: {
         legend: {
@@ -333,6 +392,23 @@ function buildDonutChart(txMes) {
             font: { size: 11, family: 'Inter' },
             boxWidth: 10,
             padding: 8,
+            // Codificación secundaria: el monto va en la propia leyenda, así la
+            // identidad nunca depende solo del color (daltonismo, impresión B/N).
+            generateLabels: chart => {
+              const ds    = chart.data.datasets[0];
+              const total = ds.data.reduce((s, v) => s + v, 0);
+              return chart.data.labels.map((label, i) => {
+                const pct = total > 0 ? Math.round((ds.data[i] / total) * 100) : 0;
+                return {
+                  text: `${label} — ${formatMoney(ds.data[i])} (${pct}%)`,
+                  fillStyle: ds.backgroundColor[i],
+                  strokeStyle: ds.backgroundColor[i],
+                  lineWidth: 0,
+                  hidden: !chart.getDataVisibility(i),
+                  index: i,
+                };
+              });
+            },
           }
         },
         tooltip: {
