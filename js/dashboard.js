@@ -12,6 +12,13 @@
    ============================================================ */
 const CHART_PALETTE = ['#df6862', '#9b5b00', '#77a32f', '#00866e', '#00a0dc', '#615cbf', '#c76cb8'];
 const CHART_OTRAS   = '#94A3B8';   // gris: siempre significa "el resto"
+
+/* Colores FIJOS por categoría: el color sigue a la categoría, no a su tamaño.
+   Lo que esté aquí manda; el resto de porciones toma la paleta por orden.
+   #FACC15 (amarillo) elegido para Ropa y Calzado — lejos de los 5 colores KPI. */
+const CHART_CATEGORIA_COLOR = {
+  'Ropa y Calzado': '#FACC15',
+};
 const MAX_SLICES    = 7;
 const OTRAS_LABEL   = 'Otras categorías';
 
@@ -350,7 +357,9 @@ function buildDonutChart(txMes) {
 
   const labels  = top.map(e => e[0]);
   const data    = top.map(e => e[1]);
-  const colores = top.map((_, i) => CHART_PALETTE[i]);
+  // Color por categoría si está fijado; si no, el siguiente de la paleta por orden
+  let _pi = 0;
+  const colores = top.map(([cat]) => CHART_CATEGORIA_COLOR[cat] || CHART_PALETTE[_pi++]);
 
   if (ocultas.length > 0) {
     labels.push(OTRAS_LABEL);
