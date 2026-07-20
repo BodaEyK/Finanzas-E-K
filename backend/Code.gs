@@ -263,12 +263,11 @@ function setupSheets() {
 }
 
 /* ============================================================
-   MIGRACIÓN — Ejecutar UNA vez para pasar el presupuesto viejo
-   (Categoria | Presupuesto) al nuevo formato (Mes | Categoria | Presupuesto).
-   Estampa tu presupuesto actual en el mes en curso; de ahí en adelante
-   cada mes hereda del anterior hasta que lo edites.
+   MIGRACIONES — Cada una se ejecuta UNA vez, a mano, desde el editor.
+   Ambas son idempotentes: si ya se corrieron, no vuelven a hacer nada.
    ============================================================ */
-/* Añade la columna "Evento" (H) a la hoja Transacciones.
+
+/* migrateEventos — añade la columna "Evento" (H) a la hoja Transacciones.
    Es SEGURA: solo escribe el encabezado si falta; no toca ninguna fila
    de datos y se puede ejecutar varias veces sin problema. */
 function migrateEventos() {
@@ -284,6 +283,10 @@ function migrateEventos() {
   Logger.log('Columna "Evento" agregada. Las transacciones existentes quedan sin evento (normal).');
 }
 
+/* migratePresupuesto — pasa el presupuesto viejo (Categoria | Presupuesto)
+   al formato con meses (Mes | Categoria | Presupuesto). Estampa el
+   presupuesto actual en el mes en curso; de ahí en adelante cada mes hereda
+   del anterior hasta que lo edites. (Ya ejecutada en jul 2026.) */
 function migratePresupuesto() {
   const sheet  = getSheet(SHEET_BUDGET);
   const data   = sheet.getDataRange().getValues();
