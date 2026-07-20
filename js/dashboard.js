@@ -405,9 +405,9 @@ function buildDonutChart(txMes) {
                   strokeStyle: ds.backgroundColor[i],
                   lineWidth: 0,
                   // Forzar el color de texto: si no, Chart.js usa su gris oscuro
-                  // por defecto y se pierde contra el fondo (identidad = swatch,
-                  // texto = tinta clara del dashboard)
-                  fontColor: '#F1F5F9',
+                  // por defecto y se pierde contra el fondo. Usamos --color-muted
+                  // (#94A3B8), el mismo de las etiquetas KPI y los ejes.
+                  fontColor: '#94A3B8',
                   hidden: !chart.getDataVisibility(i),
                   index: i,
                 };
